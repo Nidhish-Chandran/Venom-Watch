@@ -1,0 +1,362 @@
+/* ============================================
+   Venom Watch — Custom Styles
+   Snake Detection Module
+   ============================================ */
+
+:root {
+    --venom-dark: #0f0f1e;
+    --venom-dark-2: #1a1a2e;
+    --venom-purple: #16213e;
+    --venom-accent: #ffd700;
+    --venom-green: #00d68f;
+    --venom-red: #ff4757;
+    --venom-gray: #6c757d;
+}
+
+/* ============================================
+   BODY
+   ============================================ */
+body {
+    background: linear-gradient(135deg, #0f0f1e 0%, #16213e 50%, #0f0f1e 100%);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    color: #e0e0e0;
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+}
+
+/* ============================================
+   NAVBAR
+   ============================================ */
+.venom-navbar {
+    background: rgba(15, 15, 30, 0.95) !important;
+    backdrop-filter: blur(10px);
+    border-bottom: 2px solid rgba(255, 215, 0, 0.3);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+}
+
+.venom-logo {
+    width: 36px;
+    height: 36px;
+    filter: drop-shadow(0 0 5px rgba(255, 215, 0, 0.4));
+}
+
+.venom-logo-sm {
+    width: 24px;
+    height: 24px;
+}
+
+.navbar-brand span {
+    font-size: 1.4rem;
+    letter-spacing: 0.5px;
+}
+
+/* ============================================
+   HERO SECTION
+   ============================================ */
+.hero-section {
+    padding: 2rem 0 1rem;
+}
+
+.venom-gradient-text {
+    background: linear-gradient(135deg, #ffd700 0%, #ff8c00 50%, #ff4757 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.venom-badge {
+    margin-top: 1rem;
+}
+
+/* ============================================
+   CARDS
+   ============================================ */
+.venom-card {
+    background: rgba(26, 26, 46, 0.85);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 215, 0, 0.15);
+    border-radius: 16px;
+    overflow: hidden;
+}
+
+.venom-card-header {
+    background: linear-gradient(135deg, #16213e 0%, #0f3460 100%);
+    border-bottom: 2px solid rgba(255, 215, 0, 0.3);
+    padding: 1rem 1.5rem;
+    color: #ffd700;
+}
+
+.venom-card-header-result {
+    background: linear-gradient(135deg, #0f3460 0%, #16213e 100%);
+    border-bottom: 2px solid rgba(0, 214, 143, 0.3);
+    padding: 1rem 1.5rem;
+    color: #00d68f;
+}
+
+/* ============================================
+   DROP ZONE
+   ============================================ */
+.drop-zone {
+    border: 3px dashed rgba(255, 215, 0, 0.3);
+    border-radius: 16px;
+    padding: 3rem 2rem;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    background: rgba(255, 215, 0, 0.03);
+}
+
+.drop-zone:hover {
+    border-color: rgba(255, 215, 0, 0.6);
+    background: rgba(255, 215, 0, 0.08);
+    transform: translateY(-2px);
+}
+
+.drop-zone.dragover {
+    border-color: #ffd700;
+    background: rgba(255, 215, 0, 0.15);
+    transform: scale(1.02);
+    box-shadow: 0 0 30px rgba(255, 215, 0, 0.2);
+}
+
+.drop-zone-icon {
+    font-size: 4rem;
+    color: rgba(255, 215, 0, 0.5);
+    transition: all 0.3s ease;
+}
+
+.drop-zone:hover .drop-zone-icon {
+    color: #ffd700;
+    transform: scale(1.1);
+}
+
+.drop-zone-content h5 {
+    color: #e0e0e0;
+    margin-top: 1rem;
+}
+
+/* ============================================
+   BUTTONS
+   ============================================ */
+.venom-btn-upload {
+    background: linear-gradient(135deg, #ffd700 0%, #ff8c00 100%);
+    border: none;
+    color: #0f0f1e;
+    font-weight: 600;
+    padding: 0.6rem 2rem;
+    border-radius: 50px;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(255, 215, 0, 0.3);
+}
+
+.venom-btn-upload:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 25px rgba(255, 215, 0, 0.5);
+    color: #0f0f1e;
+}
+
+.venom-btn-detect {
+    background: linear-gradient(135deg, #00d68f 0%, #00b894 100%);
+    border: none;
+    color: #0f0f1e;
+    font-weight: 700;
+    padding: 0.7rem 2.5rem;
+    border-radius: 50px;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 20px rgba(0, 214, 143, 0.4);
+    animation: pulse-glow 2s ease-in-out infinite;
+}
+
+.venom-btn-detect:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 30px rgba(0, 214, 143, 0.6);
+    color: #0f0f1e;
+}
+
+.venom-btn-detect:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    animation: none;
+}
+
+@keyframes pulse-glow {
+    0%, 100% { box-shadow: 0 4px 20px rgba(0, 214, 143, 0.4); }
+    50% { box-shadow: 0 4px 30px rgba(0, 214, 143, 0.7); }
+}
+
+/* ============================================
+   PREVIEW
+   ============================================ */
+.preview-container {
+    animation: fadeInUp 0.4s ease;
+}
+
+.venom-preview-img {
+    max-height: 350px;
+    object-fit: contain;
+    border: 2px solid rgba(255, 215, 0, 0.2);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+}
+
+.venom-annotated-img {
+    max-height: 400px;
+    object-fit: contain;
+    border: 2px solid rgba(0, 214, 143, 0.3);
+    box-shadow: 0 4px 25px rgba(0, 0, 0, 0.6);
+}
+
+/* ============================================
+   LOADING SPINNER
+   ============================================ */
+.venom-spinner {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.venom-spinner .spinner-border {
+    animation: spinner-grow 1s ease-in-out infinite, glow-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes glow-pulse {
+    0%, 100% { filter: drop-shadow(0 0 5px rgba(255, 215, 0, 0.5)); }
+    50% { filter: drop-shadow(0 0 20px rgba(255, 215, 0, 1)); }
+}
+
+/* ============================================
+   RESULT BANNER
+   ============================================ */
+.result-banner {
+    padding: 2rem;
+    border-radius: 12px;
+    animation: fadeInUp 0.5s ease;
+}
+
+.result-banner.snake-found {
+    background: linear-gradient(135deg, rgba(255, 71, 87, 0.15) 0%, rgba(255, 140, 0, 0.1) 100%);
+    border: 2px solid rgba(255, 71, 87, 0.3);
+}
+
+.result-banner.no-snake {
+    background: linear-gradient(135deg, rgba(0, 214, 143, 0.15) 0%, rgba(0, 184, 148, 0.1) 100%);
+    border: 2px solid rgba(0, 214, 143, 0.3);
+}
+
+.result-banner h3 {
+    font-size: 2rem;
+    font-weight: 800;
+    margin: 0;
+}
+
+.result-banner.snake-found h3 {
+    color: #ff4757;
+    text-shadow: 0 0 20px rgba(255, 71, 87, 0.3);
+}
+
+.result-banner.no-snake h3 {
+    color: #00d68f;
+    text-shadow: 0 0 20px rgba(0, 214, 143, 0.3);
+}
+
+.result-banner .result-icon {
+    font-size: 3rem;
+    display: block;
+    margin-bottom: 0.5rem;
+}
+
+/* ============================================
+   CONFIDENCE PROGRESS BAR
+   ============================================ */
+.venom-progress {
+    height: 12px;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.1);
+    overflow: hidden;
+}
+
+.venom-progress .progress-bar {
+    border-radius: 10px;
+    transition: width 1s ease-in-out;
+}
+
+/* ============================================
+   DETAIL BOXES
+   ============================================ */
+.detail-box {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+    padding: 1rem;
+    height: 100%;
+}
+
+.detail-label {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--venom-gray);
+    display: block;
+    margin-bottom: 0.3rem;
+}
+
+.detail-value {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #e0e0e0;
+    word-break: break-all;
+}
+
+/* ============================================
+   FOOTER
+   ============================================ */
+.venom-footer {
+    background: rgba(15, 15, 30, 0.95);
+    border-top: 2px solid rgba(255, 215, 0, 0.2);
+    margin-top: auto;
+}
+
+/* ============================================
+   ANIMATIONS
+   ============================================ */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.d-none {
+    display: none !important;
+}
+
+/* ============================================
+   RESPONSIVE
+   ============================================ */
+@media (max-width: 768px) {
+    .drop-zone {
+        padding: 2rem 1rem;
+    }
+
+    .drop-zone-icon {
+        font-size: 3rem;
+    }
+
+    .result-banner h3 {
+        font-size: 1.5rem;
+    }
+
+    .venom-btn-detect,
+    .venom-btn-upload {
+        width: 100%;
+    }
+}
