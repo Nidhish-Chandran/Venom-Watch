@@ -7,7 +7,7 @@ from django.contrib.auth.models import User
 from .models import SightingReport
 from .forms import SightingReportForm
 from .services import DuplicateSpamDetectionService
-from ai.services import SnakeAIDetectionService
+from ai.services import SnakeAIPipelineService
 from hotspots.services import DBSCANHotspotService
 from accounts.decorators import authority_required
 from django.views.decorators.cache import never_cache
@@ -15,7 +15,7 @@ from django.views.decorators.cache import never_cache
 @login_required
 @never_cache
 def create_report_view(request):
-    """Citizen sighting submission view with AI feature analysis and duplicate/spam checks."""
+    """Citizen sighting submission view with CNN AI feature analysis and persistence."""
     if request.method == 'POST':
         form = SightingReportForm(request.POST, request.FILES)
         if form.is_valid():
@@ -24,17 +24,24 @@ def create_report_view(request):
                 report.user = request.user
             report.save()
 
-            # 1. Trigger AI Detection & Species Classification Pipeline
+            # 1. Trigger Two-Stage AI Pipeline (Model #1 Snake Detection Gate + Model #2 Venom Classification)
             try:
-                ai_results = SnakeAIDetectionService.analyze_image(report.original_image.path)
+                ai_results = SnakeAIPipelineService.analyze_image(report.original_image.path)
                 
-                report.ai_detected = ai_results.get('detected', True)
-                report.species_predicted = ai_results.get('species')
-                report.common_name = ai_results.get('common_name')
-                report.venom_category = ai_results.get('venom_category')
-                report.toxicity_level = ai_results.get('toxicity_level')
-                report.danger_score = ai_results.get('danger_score', 50)
-                report.ai_confidence = ai_results.get('confidence', 95.0)
+                report.snake_detected = ai_results.get('snake_detected', False)
+                report.snake_confidence = ai_results.get('snake_confidence', 0.0)
+                report.venomous = ai_results.get('venomous')
+                report.venom_confidence = ai_results.get('venom_confidence')
+                
+                species_name = ai_results.get('species')
+                if not species_name:
+                    species_name = 'Snake' if report.snake_detected else 'Not a Snake'
+                report.species_predicted = species_name
+                report.common_name = species_name
+                report.venom_category = ai_results.get('venom_category') or 'NON_VENOMOUS'
+                report.ai_confidence = report.venom_confidence if report.venom_confidence is not None else report.snake_confidence
+                report.model_1_name = 'Snake Detector (MobileNetV2 Gate)'
+                report.model_2_name = 'venomwatch_cnn2_final (CNN)'
                 
                 if ai_results.get('processed_image_path'):
                     report.processed_image = ai_results.get('processed_image_path')
@@ -46,23 +53,39 @@ def create_report_view(request):
             # 2. Trigger Duplicate Proximity & Spam Rate-limit Evaluator
             try:
                 report = DuplicateSpamDetectionService.evaluate_and_flag(report)
-                if report.duplicate_flag:
+                if report.duplicate_flag and report.duplicate_of:
+                    messages.info(request, f"Note: This report has been linked as an update to existing incident {report.duplicate_of.report_reference}.")
+                elif report.duplicate_flag:
                     messages.info(request, "Note: This report has been flagged for authority review as a potential duplicate of a recent sighting.")
                 if report.spam_flag:
                     messages.warning(request, "Note: Submission rate limit flagged for administrative review.")
             except Exception as e:
                 pass
 
-            messages.success(request, f"Sighting reported successfully! AI Result: {report.species_predicted} ({report.get_venom_category_display()}).")
+            ref = report.report_reference
+            sub_num = f"#{report.citizen_submission_number}" if report.user else ""
+            status_disp = report.get_status_display()
+            if report.snake_detected:
+                messages.success(request, f"Sighting report {ref} {sub_num} submitted successfully! Current status: {status_disp}. AI Result: {report.species_predicted} ({report.get_venom_category_display()}).")
+            else:
+                messages.info(request, f"Sighting report {ref} {sub_num} recorded. Current status: {status_disp}. Note: AI snake detector did not confirm a snake in the uploaded image.")
             return redirect('reports:detail', pk=report.pk)
         else:
             messages.error(request, "Error creating report. Please check the required form fields.")
     else:
-        initial_data = {
-            'latitude': 9.9312,
-            'longitude': 76.2673,
-            'location_name': 'Kochi Sector 4'
-        }
+        initial_data = {}
+        if request.user.is_authenticated and hasattr(request.user, 'profile'):
+            prof = request.user.profile
+            if hasattr(prof, 'latitude') and prof.latitude is not None and prof.longitude is not None:
+                initial_data['latitude'] = prof.latitude
+                initial_data['longitude'] = prof.longitude
+            if hasattr(prof, 'registered_location') and prof.registered_location:
+                initial_data['location_name'] = prof.registered_location
+
+        if not initial_data.get('latitude'):
+            initial_data['latitude'] = 9.9312
+            initial_data['longitude'] = 76.2673
+
         form = SightingReportForm(initial=initial_data)
 
     return render(request, 'reports/create.html', {'form': form})
@@ -223,7 +246,6 @@ def risk_zones_public_view(request):
     """
     Public Community Risk Zones view.
     Displays aggregated risk level (GREEN / YELLOW / RED) without exposing exact citizen coordinates or individual markers.
-    Rule: 0 in 24h -> GREEN, 1-5 -> YELLOW, >5 -> RED.
     """
     risk_data = DBSCANHotspotService.compute_community_risk_zones(hours=24)
     return render(request, 'reports/risk_zones.html', {'risk_data': risk_data})
