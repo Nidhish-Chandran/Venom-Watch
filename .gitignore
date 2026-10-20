@@ -40,3 +40,9 @@ Thumbs.db
 local_settings.py
 db.sqlite3
 db.sqlite3-journal
+# Test and runtime uploads
+media/verification_docs/
+media/assignment_outcomes/
+media/wounds/
+media/sightings/
+

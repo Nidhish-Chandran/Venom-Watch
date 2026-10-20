@@ -52,7 +52,7 @@
                     </div>
 
                     <div class="d-flex justify-content-between align-items-center mt-3">
-                        <a href="{% url 'emergency:assistance' as emg_url %}{{ emg_url|default:'#' }}" class="btn btn-outline-secondary btn-sm">
+                        <a href="{% url 'emergency:assistance' %}" class="btn btn-outline-secondary btn-sm">
                             <i class="fa-solid fa-phone me-1"></i> Emergency Helpline
                         </a>
                         <button type="submit" id="runScreeningBtn" class="btn btn-teal">
@@ -128,7 +128,7 @@
                     </div>
 
                     <div class="d-flex justify-content-end">
-                        <a href="{% url 'emergency:assistance' as emg_url %}{{ emg_url|default:'#' }}" class="btn btn-danger-venom btn-sm">
+                        <a href="{% url 'emergency:assistance' %}" class="btn btn-danger-venom btn-sm">
                             <i class="fa-solid fa-hospital me-2"></i> Locate Anti-Venom Hospitals
                         </a>
                     </div>

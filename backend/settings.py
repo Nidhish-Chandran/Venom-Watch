@@ -54,6 +54,7 @@ INSTALLED_APPS = [
     'ranger',
     'reports',
     'accounts',
+    'emergency',
 ]
 
 # ============================================
@@ -91,6 +92,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'accounts.context_processors.notifications_processor',
             ],
         },
     },
@@ -220,3 +222,6 @@ LOGGING = {
         },
     },
 }
+LOGIN_URL = 'accounts:login'
+LOGIN_REDIRECT_URL = 'dashboard:home'
+LOGOUT_REDIRECT_URL = 'accounts:login'

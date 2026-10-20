@@ -1,369 +1,287 @@
-/* ============================================
-   Venom Watch — Frontend JavaScript
-   Handles: Drag & Drop, Preview, AJAX Upload,
-   Result Display, Reset
-   ============================================ */
+/**
+ * VenomWatch — Core UI/UX Interactive Utilities
+ * Smooth micro-interactions, accessible toast feedback, glassmorphic navbar effects,
+ * button states, back-to-top handler, and animated dashboard stats.
+ */
 
 (function () {
     'use strict';
 
-    // ============================================
-    // DOM ELEMENTS
-    // ============================================
-    const dropZone = document.getElementById('dropZone');
-    const fileInput = document.getElementById('fileInput');
-    const browseBtn = document.getElementById('browseBtn');
-    const previewContainer = document.getElementById('previewContainer');
-    const previewImage = document.getElementById('previewImage');
-    const fileNameDisplay = document.getElementById('fileNameDisplay');
-    const actionButtons = document.getElementById('actionButtons');
-    const detectBtn = document.getElementById('detectBtn');
-    const resetBtn = document.getElementById('resetBtn');
-    const loadingSpinner = document.getElementById('loadingSpinner');
-    const resultCard = document.getElementById('resultCard');
-    const resultBanner = document.getElementById('resultBanner');
-    const confidenceBar = document.getElementById('confidenceBar');
-    const confidenceText = document.getElementById('confidenceText');
-    const annotatedImage = document.getElementById('annotatedImage');
-    const annotatedImageContainer = document.getElementById('annotatedImageContainer');
-    const errorAlert = document.getElementById('errorAlert');
-    const errorMessage = document.getElementById('errorMessage');
-    const newDetectionBtn = document.getElementById('newDetectionBtn');
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-    // Detail fields
-    const detailDetection = document.getElementById('detailDetection');
-    const detailBbox = document.getElementById('detailBbox');
-    const detailConfidence = document.getElementById('detailConfidence');
-    const detailRecordId = document.getElementById('detailRecordId');
-
-    // ============================================
-    // STATE
-    // ============================================
-    let selectedFile = null;
-    const MAX_SIZE_MB = parseInt(document.querySelector('.drop-zone').dataset.maxSize || '10', 10);
-    const ALLOWED_TYPES = ['image/jpeg', 'image/jpg', 'image/png'];
-    const ALLOWED_EXTENSIONS = ['.jpg', '.jpeg', '.png'];
-
-    // ============================================
-    // EVENT: Browse Button Click
-    // ============================================
-    if (browseBtn) {
-        browseBtn.addEventListener('click', function () {
-            fileInput.click();
-        });
-    }
-
-    // ============================================
-    // EVENT: Drop Zone Click
-    // ============================================
-    if (dropZone) {
-        dropZone.addEventListener('click', function (e) {
-            if (e.target.tagName !== 'BUTTON') {
-                fileInput.click();
-            }
-        });
-    }
-
-    // ============================================
-    // EVENT: File Input Change
-    // ============================================
-    if (fileInput) {
-        fileInput.addEventListener('change', function (e) {
-            if (e.target.files.length > 0) {
-                handleFile(e.target.files[0]);
-            }
-        });
-    }
-
-    // ============================================
-    // DRAG & DROP EVENTS
-    // ============================================
-    if (dropZone) {
-        ['dragenter', 'dragover'].forEach(eventName => {
-            dropZone.addEventListener(eventName, function (e) {
-                e.preventDefault();
-                e.stopPropagation();
-                dropZone.classList.add('dragover');
-            });
-        });
-
-        ['dragleave', 'drop'].forEach(eventName => {
-            dropZone.addEventListener(eventName, function (e) {
-                e.preventDefault();
-                e.stopPropagation();
-                dropZone.classList.remove('dragover');
-            });
-        });
-
-        dropZone.addEventListener('drop', function (e) {
-            if (e.dataTransfer.files.length > 0) {
-                handleFile(e.dataTransfer.files[0]);
-            }
-        });
-    }
-
-    // ============================================
-    // HANDLE FILE SELECTION
-    // ============================================
-    function handleFile(file) {
-        hideError();
-
-        // Validate file type
-        const ext = '.' + (file.name.split('.').pop() || '').toLowerCase();
-        if (!ALLOWED_EXTENSIONS.includes(ext)) {
-            showError(
-                `Unsupported file format "${ext}". Please upload JPG, JPEG, or PNG.`
-            );
-            return;
+    // =========================================================================
+    // 1. REUSABLE TOAST NOTIFICATION SYSTEM
+    // =========================================================================
+    function getToastContainer() {
+        let container = document.getElementById('vwToastContainer');
+        if (!container) {
+            container = document.createElement('div');
+            container.id = 'vwToastContainer';
+            container.className = 'vw-toast-container';
+            container.setAttribute('aria-live', 'polite');
+            container.setAttribute('aria-atomic', 'true');
+            document.body.appendChild(container);
         }
-
-        // Validate file type via MIME
-        if (!ALLOWED_TYPES.includes(file.type) && file.type !== '') {
-            showError(
-                `Invalid file type. Please upload JPG, JPEG, or PNG images.`
-            );
-            return;
-        }
-
-        // Validate file size
-        const sizeMB = file.size / (1024 * 1024);
-        if (sizeMB > MAX_SIZE_MB) {
-            showError(
-                `File size (${sizeMB.toFixed(1)} MB) exceeds the maximum allowed size of ${MAX_SIZE_MB} MB.`
-            );
-            return;
-        }
-
-        // Valid file — store and preview
-        selectedFile = file;
-        showPreview(file);
-        showActionButtons();
+        return container;
     }
 
-    // ============================================
-    // SHOW IMAGE PREVIEW
-    // ============================================
-    function showPreview(file) {
-        const reader = new FileReader();
-        reader.onload = function (e) {
-            previewImage.src = e.target.result;
-            previewContainer.classList.remove('d-none');
-            previewContainer.style.display = 'block';
-            fileNameDisplay.textContent =
-                `${file.name} (${(file.size / 1024).toFixed(1)} KB)`;
+    /**
+     * Show a modern non-blocking glass toast notification.
+     * @param {string} message - Message text to display
+     * @param {string} type - 'success' | 'error' | 'warning' | 'info'
+     * @param {number} duration - Auto-dismiss delay in ms (default 4500)
+     */
+    window.showToast = function (message, type = 'info', duration = 4500) {
+        const container = getToastContainer();
+
+        const toast = document.createElement('div');
+        toast.className = `vw-toast vw-toast-${type}`;
+
+        const icons = {
+            success: 'fa-circle-check',
+            error: 'fa-triangle-exclamation',
+            warning: 'fa-triangle-exclamation',
+            info: 'fa-circle-info'
         };
-        reader.readAsDataURL(file);
-    }
+        const iconClass = icons[type] || icons.info;
 
-    // ============================================
-    // SHOW/HIDE ACTION BUTTONS
-    // ============================================
-    function showActionButtons() {
-        actionButtons.style.display = 'flex';
-    }
+        toast.innerHTML = `
+            <div class="vw-toast-icon">
+                <i class="fa-solid ${iconClass}"></i>
+            </div>
+            <div class="vw-toast-content">
+                <p class="vw-toast-message">${message}</p>
+            </div>
+            <button type="button" class="vw-toast-close" aria-label="Close notification">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        `;
 
-    function hideActionButtons() {
-        actionButtons.style.display = 'none';
-    }
+        const closeBtn = toast.querySelector('.vw-toast-close');
+        function removeToast() {
+            if (toast.classList.contains('toast-dismissing')) return;
+            toast.classList.add('toast-dismissing');
+            setTimeout(() => {
+                if (toast.parentNode) toast.parentNode.removeChild(toast);
+            }, 260);
+        }
 
-    // ============================================
-    // EVENT: Detect Button Click
-    // ============================================
-    if (detectBtn) {
-        detectBtn.addEventListener('click', function () {
-            if (!selectedFile) {
-                showError('Please select an image first.');
-                return;
+        closeBtn.addEventListener('click', removeToast);
+        container.appendChild(toast);
+
+        if (duration > 0) {
+            setTimeout(removeToast, duration);
+        }
+
+        return toast;
+    };
+
+    // =========================================================================
+    // 2. BUTTON LOADING STATE HELPER
+    // =========================================================================
+    window.setButtonLoading = function (button, isLoading, loadingText = '') {
+        if (!button) return;
+        if (isLoading) {
+            button.dataset.originalHtml = button.innerHTML;
+            button.classList.add('is-loading');
+            button.disabled = true;
+            if (loadingText) {
+                button.innerHTML = `<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>${loadingText}`;
             }
-            performDetection();
-        });
-    }
+        } else {
+            button.classList.remove('is-loading');
+            button.disabled = false;
+            if (button.dataset.originalHtml) {
+                button.innerHTML = button.dataset.originalHtml;
+                delete button.dataset.originalHtml;
+            }
+        }
+    };
 
-    // ============================================
-    // PERFORM DETECTION (AJAX to /api/detect/)
-    // ============================================
-    function performDetection() {
-        // Show loading
-        hideError();
-        hideResultCard();
-        hideActionButtons();
-        loadingSpinner.classList.remove('d-none');
-        detectBtn.disabled = true;
+    // =========================================================================
+    // 3. DASHBOARD NUMBER COUNTER ANIMATION
+    // =========================================================================
+    function animateCounters() {
+        if (prefersReducedMotion) return;
 
-        // Build FormData
-        const formData = new FormData();
-        formData.append('image', selectedFile);
-        formData.append('csrfmiddlewaretoken', getCSRFToken());
+        const counters = document.querySelectorAll('.stat-box h4, .stat-counter, .stat-number');
+        counters.forEach(counter => {
+            const rawText = counter.innerText.trim();
+            const target = parseInt(rawText, 10);
+            if (isNaN(target) || target <= 0) return;
 
-        // Send request
-        fetch('/api/detect/', {
-            method: 'POST',
-            body: formData,
-            headers: {
-                'X-CSRFToken': getCSRFToken(),
-            },
-        })
-        .then(response => {
-            return response.json().then(data => {
-                if (!response.ok) {
-                    throw new Error(data.error || 'Detection request failed.');
+            // Only animate if it's purely a number
+            if (!/^\d+$/.test(rawText)) return;
+
+            const duration = 500; // ms
+            const startTime = performance.now();
+
+            function updateCounter(currentTime) {
+                const elapsed = currentTime - startTime;
+                const progress = Math.min(elapsed / duration, 1);
+                // Ease out cubic
+                const easeProgress = 1 - Math.pow(1 - progress, 3);
+                const current = Math.floor(easeProgress * target);
+                counter.innerText = current;
+
+                if (progress < 1) {
+                    requestAnimationFrame(updateCounter);
+                } else {
+                    counter.innerText = target;
                 }
-                return data;
-            });
-        })
-        .then(data => {
-            loadingSpinner.classList.add('d-none');
-            detectBtn.disabled = false;
-            showResult(data);
-        })
-        .catch(error => {
-            loadingSpinner.classList.add('d-none');
-            detectBtn.disabled = false;
-            showActionButtons();
-            showError(error.message || 'An unexpected error occurred.');
+            }
+
+            counter.innerText = '0';
+            requestAnimationFrame(updateCounter);
         });
     }
 
-    // ============================================
-    // SHOW RESULT
-    // ============================================
-    function showResult(data) {
-        // Build banner
-        if (data.snake) {
-            resultBanner.className = 'result-banner text-center mb-4 snake-found';
-            resultBanner.innerHTML = `
-                <i class="bi bi-exclamation-triangle-fill result-icon text-danger"></i>
-                <h3>🐍 Snake Detected!</h3>
-                <p class="text-muted mb-0 mt-1">A snake was found in the image.</p>
-            `;
-        } else {
-            resultBanner.className = 'result-banner text-center mb-4 no-snake';
-            resultBanner.innerHTML = `
-                <i class="bi bi-check-circle-fill result-icon text-success"></i>
-                <h3>✅ No Snake Detected</h3>
-                <p class="text-muted mb-0 mt-1">No snake was found in the image.</p>
-            `;
-        }
+    // =========================================================================
+    // 4. NAVBAR SCROLL & BACK TO TOP BEHAVIOR
+    // =========================================================================
+    function initNavigationEffects() {
+        const navbar = document.getElementById('mainNav');
+        const backToTopBtn = document.getElementById('backToTopBtn');
 
-        // Confidence bar
-        const conf = data.confidence || 0;
-        confidenceText.textContent = conf.toFixed(2) + '%';
-        confidenceBar.style.width = '0%';
+        let lastScrollY = window.scrollY;
 
-        // Color the bar based on result
-        if (data.snake) {
-            confidenceBar.className = 'progress-bar bg-danger';
-        } else {
-            confidenceBar.className = 'progress-bar bg-success';
-        }
+        function handleScroll() {
+            const currentScrollY = window.scrollY;
 
-        // Animate confidence bar
-        setTimeout(() => {
-            confidenceBar.style.width = conf + '%';
-        }, 300);
-
-        // Annotated image
-        if (data.annotated_image_url) {
-            annotatedImage.src = data.annotated_image_url;
-            annotatedImageContainer.classList.remove('d-none');
-            annotatedImageContainer.style.display = 'block';
-        } else {
-            annotatedImageContainer.classList.add('d-none');
-            annotatedImageContainer.style.display = 'none';
-        }
-
-        // Details
-        detailDetection.innerHTML = data.snake
-            ? '<span class="text-danger fw-bold">Snake Detected</span>'
-            : '<span class="text-success fw-bold">No Snake</span>';
-
-        detailBbox.textContent = data.bbox
-            ? `[${data.bbox.join(', ')}]`
-            : 'N/A';
-
-        detailConfidence.innerHTML = `<span class="text-warning fw-bold">${conf.toFixed(2)}%</span>`;
-
-        detailRecordId.textContent = data.record_id || 'N/A';
-
-        // Show result card with animation
-        resultCard.classList.remove('d-none');
-        resultCard.style.animation = 'fadeInUp 0.5s ease';
-
-        // Scroll to result
-        setTimeout(() => {
-            resultCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }, 100);
-    }
-
-    // ============================================
-    // HIDE RESULT
-    // ============================================
-    function hideResultCard() {
-        resultCard.classList.add('d-none');
-    }
-
-    // ============================================
-    // ERROR HANDLING
-    // ============================================
-    function showError(message) {
-        errorMessage.textContent = message;
-        errorAlert.classList.remove('d-none');
-        errorAlert.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }
-
-    function hideError() {
-        errorAlert.classList.add('d-none');
-    }
-
-    // ============================================
-    // RESET
-    // ============================================
-    function resetAll() {
-        selectedFile = null;
-        fileInput.value = '';
-        previewImage.src = '';
-        previewContainer.classList.add('d-none');
-        previewContainer.style.display = 'none';
-        hideActionButtons();
-        hideResultCard();
-        hideError();
-        loadingSpinner.classList.add('d-none');
-        detectBtn.disabled = false;
-
-        // Scroll to top
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
-
-    if (resetBtn) {
-        resetBtn.addEventListener('click', resetAll);
-    }
-
-    if (newDetectionBtn) {
-        newDetectionBtn.addEventListener('click', resetAll);
-    }
-
-    // ============================================
-    // CSRF TOKEN HELPER
-    // ============================================
-    function getCSRFToken() {
-        const cookies = document.cookie.split(';');
-        for (let cookie of cookies) {
-            cookie = cookie.trim();
-            if (cookie.startsWith('csrftoken=')) {
-                return cookie.substring('csrftoken='.length);
+            // Navbar shrink & enhanced blur
+            if (navbar) {
+                if (currentScrollY > 20) {
+                    navbar.classList.add('navbar-scrolled');
+                } else {
+                    navbar.classList.remove('navbar-scrolled');
+                }
             }
+
+            // Back to top visibility
+            if (backToTopBtn) {
+                if (currentScrollY > 320) {
+                    backToTopBtn.classList.add('visible');
+                } else {
+                    backToTopBtn.classList.remove('visible');
+                }
+            }
+
+            lastScrollY = currentScrollY;
         }
-        // Fallback: look for hidden input
-        const csrfInput = document.querySelector('[name=csrfmiddlewaretoken]');
-        return csrfInput ? csrfInput.value : '';
+
+        window.addEventListener('scroll', handleScroll, { passive: true });
+        handleScroll(); // Initial check
+
+        if (backToTopBtn) {
+            backToTopBtn.addEventListener('click', function () {
+                window.scrollTo({
+                    top: 0,
+                    behavior: 'smooth'
+                });
+            });
+        }
     }
 
-    // Set data attribute for max size on dropzone
-    if (dropZone) {
-        const maxMb = document.querySelector('.drop-zone p').textContent.match(/Max Size:\s*(\d+)/);
-        if (maxMb) {
-            dropZone.dataset.maxSize = maxMb[1];
+    // =========================================================================
+    // 5. MOBILE DRAWER TOGGLE & INTERACTIVITY
+    // =========================================================================
+    function initMobileNav() {
+        const toggler = document.getElementById('venomNavbarToggler') || document.querySelector('.navbar-toggler');
+        const navbarCollapse = document.getElementById('venomNavbar');
+        if (!toggler || !navbarCollapse) return;
+
+        toggler.addEventListener('click', function (e) {
+            e.stopPropagation();
+            const isOpen = navbarCollapse.classList.contains('show');
+            if (isOpen) {
+                navbarCollapse.classList.remove('show');
+                toggler.setAttribute('aria-expanded', 'false');
+            } else {
+                navbarCollapse.classList.add('show');
+                toggler.setAttribute('aria-expanded', 'true');
+            }
+        });
+
+        // Auto close when clicking any navigation link or profile badge on mobile
+        const navLinks = navbarCollapse.querySelectorAll('.nav-link, .btn, .user-identity-card');
+        navLinks.forEach(link => {
+            link.addEventListener('click', function () {
+                if (window.innerWidth < 992) {
+                    navbarCollapse.classList.remove('show');
+                    toggler.setAttribute('aria-expanded', 'false');
+                }
+            });
+        });
+
+        // Close on outside click
+        document.addEventListener('click', function (e) {
+            if (window.innerWidth < 992 && navbarCollapse.classList.contains('show')) {
+                if (!navbarCollapse.contains(e.target) && !toggler.contains(e.target)) {
+                    navbarCollapse.classList.remove('show');
+                    toggler.setAttribute('aria-expanded', 'false');
+                }
+            }
+        });
+
+        // Close on Escape key
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape' && navbarCollapse.classList.contains('show')) {
+                navbarCollapse.classList.remove('show');
+                toggler.setAttribute('aria-expanded', 'false');
+                toggler.focus();
+            }
+        });
+    }
+
+    // =========================================================================
+    // 6. GLOBAL DOM INITIALIZATION
+    // =========================================================================
+    function initVenomApp() {
+        // Initialize Navigation Enhancements
+        initNavigationEffects();
+        initMobileNav();
+
+        // Run metric counters
+        animateCounters();
+
+        // Convert existing server flash messages into toasts
+        const serverAlerts = document.querySelectorAll('.container > .alert[role="alert"]');
+        if (serverAlerts.length > 0) {
+            serverAlerts.forEach(alert => {
+                let type = 'info';
+                if (alert.classList.contains('alert-danger')) type = 'error';
+                else if (alert.classList.contains('alert-success')) type = 'success';
+                else if (alert.classList.contains('alert-warning')) type = 'warning';
+
+                const clone = alert.cloneNode(true);
+                const btn = clone.querySelector('.btn-close');
+                if (btn) btn.remove();
+                const icon = clone.querySelector('i');
+                if (icon) icon.remove();
+                const text = clone.innerText.trim();
+
+                if (text) {
+                    window.showToast(text, type, 5000);
+                    alert.style.display = 'none';
+                }
+            });
         }
+
+        // Global Escape key dismisses overlays
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') {
+                if (typeof window.resetPanel === 'function') {
+                    window.resetPanel();
+                }
+            }
+        });
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initVenomApp);
+    } else {
+        initVenomApp();
     }
 
 })();
+
