@@ -18,7 +18,6 @@ class UserProfile(models.Model):
         (ROLE_RANGER, 'Forest Ranger (Field Responder)'),
         (ROLE_AUTHORITY, 'Authority Officer (Dispatch & Verification)'),
         (ROLE_ADMIN, 'Platform Administrator'),
-        (ROLE_RESPONDER, 'Medical / Emergency Responder'),
     ]
 
     # Roles a visitor may apply/register for
