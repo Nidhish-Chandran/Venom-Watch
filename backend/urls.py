@@ -11,7 +11,8 @@ urlpatterns = [
     path('', include('snake_detector.urls')),
     path('ai/', include('ai.urls')),
     path('dashboard/', include('dashboard.urls')),
-    path('hotspots/', include('hotspots.urls')),  # App routes
+    path('hotspots/', include('hotspots.urls')),
+    path('ranger/', include('ranger.urls')),  # App routes
 ]
 
 # Serve media files during development

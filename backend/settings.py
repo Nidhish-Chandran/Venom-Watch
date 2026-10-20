@@ -51,6 +51,7 @@ INSTALLED_APPS = [
     'ai',
     'dashboard',
     'hotspots',
+    'ranger',
 ]
 
 # ============================================
