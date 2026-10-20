@@ -1,0 +1,64 @@
+{% extends 'base_auth.html' %}
+
+{% block title %}Sign In — Venom Watch{% endblock %}
+
+{% block content %}
+<div class="auth-container">
+    <div class="auth-card">
+
+        <!-- Header -->
+        <div class="auth-card-header">
+            <div class="auth-icon-wrapper">
+                <i class="fa-solid fa-staff-snake"></i>
+            </div>
+            <h2 class="auth-title">Welcome back</h2>
+            <p class="auth-subtitle">Sign in to your Venom Watch account</p>
+        </div>
+
+        <form method="post" action="{% url 'accounts:login' %}" novalidate autocomplete="on">
+            {% csrf_token %}
+
+            {% if form.non_field_errors %}
+                <div class="alert alert-danger py-2 mb-3" style="font-size: 0.8125rem;">
+                    {% for error in form.non_field_errors %}
+                        <div><i class="fa-solid fa-triangle-exclamation me-1"></i>{{ error }}</div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+
+            <div class="auth-form-group">
+                <label class="auth-form-label" for="{{ form.username.id_for_label }}">Username</label>
+                {{ form.username }}
+                {% for error in form.username.errors %}
+                    <div class="auth-form-error">
+                        <i class="fa-solid fa-circle-exclamation"></i>{{ error }}
+                    </div>
+                {% endfor %}
+            </div>
+
+            <div class="auth-form-group">
+                <label class="auth-form-label" for="{{ form.password.id_for_label }}">Password</label>
+                {{ form.password }}
+                {% for error in form.password.errors %}
+                    <div class="auth-form-error">
+                        <i class="fa-solid fa-circle-exclamation"></i>{{ error }}
+                    </div>
+                {% endfor %}
+            </div>
+
+            <button type="submit" class="auth-btn-primary">
+                <i class="fa-solid fa-right-to-bracket me-2"></i> Sign In
+            </button>
+        </form>
+
+        <div class="auth-divider"></div>
+
+        <p class="auth-footer-text">Don't have an account?</p>
+        <div class="text-center">
+            <a href="{% url 'accounts:register' %}" class="auth-link">
+                Create an account <i class="fa-solid fa-arrow-right ms-1"></i>
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}
