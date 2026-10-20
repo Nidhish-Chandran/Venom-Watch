@@ -7,11 +7,15 @@ class UserProfile(models.Model):
     ROLE_CITIZEN = 'citizen'
     ROLE_AUTHORITY = 'authority'
     ROLE_RESPONDER = 'responder'
+    ROLE_RANGER = 'ranger'
+    ROLE_ADMIN = 'admin'
     
     ROLE_CHOICES = [
         (ROLE_CITIZEN, 'Citizen / General Public'),
         (ROLE_AUTHORITY, 'Forest Officer / Wildlife Authority'),
         (ROLE_RESPONDER, 'Medical / Emergency Responder'),
+        (ROLE_RANGER, 'Forest Ranger (Field Responder)'),
+        (ROLE_ADMIN, 'Platform Administrator'),
     ]
 
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
@@ -29,7 +33,15 @@ class UserProfile(models.Model):
 
     @property
     def is_responder(self):
-        return self.role in [self.ROLE_RESPONDER, self.ROLE_AUTHORITY] or self.user.is_superuser
+        return self.role in [self.ROLE_RESPONDER, self.ROLE_AUTHORITY, self.ROLE_RANGER] or self.user.is_superuser
+
+    @property
+    def is_admin(self):
+        return self.role == self.ROLE_ADMIN or self.user.is_superuser
+
+    @property
+    def is_ranger(self):
+        return self.role in [self.ROLE_RANGER, self.ROLE_RESPONDER]
 
 
 @receiver(post_save, sender=User)
