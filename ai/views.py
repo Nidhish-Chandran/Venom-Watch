@@ -6,19 +6,19 @@ from django.core.files.storage import default_storage
 from django.core.files.base import ContentFile
 from django.shortcuts import render
 from django.contrib import messages
-from django.contrib.auth.decorators import login_required
-from django.views.decorators.cache import never_cache
-from django.utils.decorators import method_decorator
 import uuid
 import os
 from .services import SnakeAIPipelineService, SnakebiteScreeningService, WoundScreeningService
+
+from django.views.decorators.cache import never_cache
+from django.utils.decorators import method_decorator
 
 @method_decorator(never_cache, name='dispatch')
 class SnakeAIAnalysisAPIView(APIView):
     """
     REST API endpoint for CNN-based AI snake image analysis.
     Accepts POST with 'image' file.
-    Runs two-stage CNN classification (MobileNetV2 Serpentes Gate + venomwatch_cnn2_final).
+    Runs single-stage CNN classification (venomwatch_cnn2_final).
     Returns: is_snake, species, venomous status, confidence.
     """
     parser_classes = (MultiPartParser, FormParser)
@@ -48,6 +48,9 @@ class SnakeAIAnalysisAPIView(APIView):
         except Exception as e:
             return Response({'error': f"AI Analysis failed: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+
+from django.contrib.auth.decorators import login_required
+from django.views.decorators.cache import never_cache
 
 @login_required
 @never_cache

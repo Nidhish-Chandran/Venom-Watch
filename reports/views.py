@@ -46,7 +46,7 @@ def _refresh_ranger_availability(ranger_user):
 @login_required
 @never_cache
 def create_report_view(request):
-    """Citizen sighting submission view with CNN AI feature analysis and persistence."""
+    """Citizen sighting submission view with AI feature analysis and duplicate/spam checks."""
     if request.method == 'POST':
         form = SightingReportForm(request.POST, request.FILES)
         if form.is_valid():
@@ -55,7 +55,7 @@ def create_report_view(request):
                 report.user = request.user
             report.save()
 
-            # 1. Trigger Two-Stage AI Pipeline (Model #1 Snake Detection Gate + Model #2 Venom Classification)
+            # 1. Trigger Two-Stage AI Pipeline (Model #1 Snake Detection + Model #2 Venom Classification)
             try:
                 ai_results = SnakeAIPipelineService.analyze_image(report.original_image.path)
                 
@@ -68,11 +68,10 @@ def create_report_view(request):
                 if not species_name:
                     species_name = 'Snake' if report.snake_detected else 'Not a Snake'
                 report.species_predicted = species_name
-                report.common_name = species_name
                 report.venom_category = ai_results.get('venom_category') or 'NON_VENOMOUS'
                 report.ai_confidence = report.venom_confidence if report.venom_confidence is not None else report.snake_confidence
-                report.model_1_name = 'Snake Detector (MobileNetV2 Gate)'
-                report.model_2_name = 'venomwatch_cnn2_final (CNN)'
+                report.model_1_name = 'Snake Detector'
+                report.model_2_name = 'Venom Classifier'
                 
                 report.save()
             except Exception as e:
@@ -104,10 +103,10 @@ def create_report_view(request):
         initial_data = {}
         if request.user.is_authenticated and hasattr(request.user, 'profile'):
             prof = request.user.profile
-            if hasattr(prof, 'latitude') and prof.latitude is not None and prof.longitude is not None:
+            if prof.latitude is not None and prof.longitude is not None:
                 initial_data['latitude'] = prof.latitude
                 initial_data['longitude'] = prof.longitude
-            if hasattr(prof, 'registered_location') and prof.registered_location:
+            if prof.registered_location:
                 initial_data['location_name'] = prof.registered_location
 
         if not initial_data.get('latitude'):
@@ -591,7 +590,6 @@ def risk_zones_public_view(request):
     - ORANGE (Caution: 1-2 distinct active incidents)
     - YELLOW (Recently Resolved: active cooldown)
     - GREEN (No Recent Active Incidents: cleared retention)
-    Displays aggregated risk level without exposing exact citizen coordinates or individual markers.
     """
     risk_data = DBSCANHotspotService.compute_community_risk_zones()
     user_lat = 9.9312

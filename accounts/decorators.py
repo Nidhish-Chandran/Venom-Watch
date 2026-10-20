@@ -93,19 +93,3 @@ def admin_required(view_func):
         raise PermissionDenied("Access Denied: Platform Administrator privileges required.")
 
     return _wrapped_view
-
-
-def admin_required(view_func):
-    """Platform administrator access only."""
-    @wraps(view_func)
-    def _wrapped_view(request, *args, **kwargs):
-        if not request.user.is_authenticated:
-            return redirect_to_login(request.get_full_path(), login_url='accounts:login')
-
-        profile = getattr(request.user, 'profile', None)
-        if request.user.is_superuser or (profile is not None and getattr(profile, 'role', '') == 'admin'):
-            return view_func(request, *args, **kwargs)
-
-        raise PermissionDenied("Access Denied: Platform Administrator privileges required.")
-
-    return _wrapped_view

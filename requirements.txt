@@ -1,11 +1,5 @@
 Django>=5.0
-djangorestframework
-django-cors-headers
-python-decouple
-numpy
+numpy<2.0.0
 opencv-python
 pandas
 scipy
-scikit-learn
-Pillow
-tensorflow

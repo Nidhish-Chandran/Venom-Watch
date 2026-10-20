@@ -8,41 +8,94 @@ from django.contrib.auth.models import User
 from accounts.models import UserProfile
 from reports.models import SightingReport
 from emergency.models import Hospital
-from ai.services import SNAKE_DATABASE
+SNAKE_DATABASE = {}
 
 def seed_data():
-    print("Seeding Venom Watch Demo Data...")
+    print("Warning: seed_demo_data is permanently disabled to enforce real database records only.")
+    return
 
     # 1. Create Superuser / Admin & Authority Officers
-    admin_user, created = User.objects.get_or_create(username='admin', defaults={
+    admin_user, created = User.objects.get_or_create(username='admin_demo', defaults={
         'email': 'admin@venomwatch.org',
         'is_staff': True,
         'is_superuser': True
     })
     if created:
-        admin_user.set_password('admin123')
+        admin_user.set_password('admin_demo123')
         admin_user.save()
-        print("Created Superuser: admin / admin123")
+        print("Created Superuser: admin_demo / admin_demo123")
 
-    ranger_user, created = User.objects.get_or_create(username='ranger_officer', defaults={
-        'email': 'ranger@forest.gov.in',
-        'is_staff': True
+    authority_user, created = User.objects.get_or_create(username='authority_demo', defaults={
+        'email': 'officer@forest.gov.in',
+        'is_staff': False,
+        'is_superuser': False
     })
     if created:
-        ranger_user.set_password('ranger123')
-        ranger_user.save()
-        ranger_user.profile.role = UserProfile.ROLE_AUTHORITY
-        ranger_user.profile.organization = 'State Forest Department - Wildlife Division'
-        ranger_user.profile.save()
-        print("Created Authority User: ranger_officer / ranger123")
+        authority_user.set_password('authority_demo123')
+        authority_user.save()
+        authority_user.profile.role = UserProfile.ROLE_AUTHORITY
+        authority_user.profile.organization = 'State Forest Department - Wildlife Division'
+        authority_user.profile.save()
+        print("Created Authority console user: authority_demo / authority_demo123")
 
-    citizen_user, created = User.objects.get_or_create(username='john_citizen', defaults={
-        'email': 'john@gmail.com'
-    })
-    if created:
-        citizen_user.set_password('citizen123')
-        citizen_user.save()
-        print("Created Citizen User: john_citizen / citizen123")
+    # Ensure the superuser's profile carries the ADMIN role even if it pre-existed
+    admin_profile = admin_user.profile
+    if admin_profile.role != UserProfile.ROLE_ADMIN:
+        admin_profile.role = UserProfile.ROLE_ADMIN
+        admin_profile.full_name = 'Platform Administrator'
+        admin_profile.save()
+
+    # Ensure the superuser's profile carries the ADMIN role even if it pre-existed
+    admin_profile = admin_user.profile
+    if admin_profile.role != UserProfile.ROLE_ADMIN:
+        admin_profile.role = UserProfile.ROLE_ADMIN
+        admin_profile.full_name = 'Platform Administrator'
+        admin_profile.save()
+
+    # 1b. Demo Rangers — different registered operational bases (for location-based dispatch)
+    RANGER_PASSWORD = 'ranger_demo123'
+    rangers_data = [
+        {'username': 'ranger_demo',       'first_name': 'Arun Kumar',    'last_name': '', 'registered_location': 'Kollam',             'latitude': 8.8932,  'longitude': 76.6141},
+        {'username': 'ranger_kollam_2',   'first_name': 'Meera Nair',    'last_name': '', 'registered_location': 'Kollam',             'latitude': 8.8805,  'longitude': 76.5980},
+        {'username': 'ranger_kottarakkara','first_name': 'Suresh Menon', 'last_name': '', 'registered_location': 'Kottarakkara',       'latitude': 8.8853,  'longitude': 76.7904},
+        {'username': 'ranger_tvpm',       'first_name': 'Fathima Beevi', 'last_name': '', 'registered_location': 'Thiruvananthapuram', 'latitude': 8.5241,  'longitude': 76.9366},
+    ]
+    for rd in rangers_data:
+        uname = rd.pop('username')
+        r, made = User.objects.get_or_create(username=uname, defaults={'email': f'{uname}@forest.gov.in'})
+        if made:
+            r.set_password(RANGER_PASSWORD)
+            r.first_name = rd['first_name']
+            r.last_name = rd['last_name']
+            r.save()
+        prof = r.profile
+        prof.role = UserProfile.ROLE_RANGER
+        prof.organization = 'State Forest Department - Snake Rescue Unit'
+        prof.registered_location = rd['registered_location']
+        prof.latitude = rd['latitude']
+        prof.longitude = rd['longitude']
+        prof.availability = UserProfile.AVAILABILITY_AVAILABLE
+        prof.save()
+    print("Demo rangers seeded: ranger_demo, ranger_kollam_2 (Kollam), ranger_kottarakkara, ranger_tvpm — password: " + RANGER_PASSWORD)
+
+    citizens_data = [
+        {'username': 'john_citizen', 'email': 'john@gmail.com',   'first_name': 'John',  'last_name': 'Mathew'},
+        {'username': 'priya_citizen','email': 'priya@gmail.com',  'first_name': 'Priya', 'last_name': 'Nair'},
+    ]
+    for cd in citizens_data:
+        c, made = User.objects.get_or_create(username=cd['username'], defaults={'email': cd['email']})
+        if made:
+            c.set_password('citizen_demo123')
+            c.first_name = cd['first_name']
+            c.last_name = cd['last_name']
+            c.save()
+            c.profile.role = UserProfile.ROLE_CITIZEN
+            c.profile.full_name = f"{cd['first_name']} {cd['last_name']}"
+            c.profile.save()
+    print("Citizen users seeded: john_citizen, priya_citizen — password: citizen_demo123")
+
+    # Keep a reference used by the sample-report seeder below
+    citizen_user = User.objects.get(username='john_citizen')
 
     # 2. Seed Emergency Hospitals
     hospitals_data = [
@@ -188,6 +241,37 @@ def seed_data():
             )
 
         print("Sample sightings seeded successfully.")
+
+    # 3b. Location-dispatch demo reports (Kollam vs Thrissur) so the
+    #     Authority "Assign Ranger" list changes with report location.
+    dispatch_reports = [
+        {
+            'title': 'Cobra near paddy field by Kallada bridge',
+            'latitude': 8.9200, 'longitude': 76.6000,
+            'location_name': 'Kollam town, Asramam ground',
+            'species_predicted': 'Indian Cobra (Naja naja)',
+            'common_name': 'Spectacled Cobra',
+            'venom_category': 'HIGHLY_VENOMOUS', 'toxicity_level': 'CRITICAL',
+            'danger_score': 92, 'ai_confidence': 91.5,
+            'notes': 'Demo incident for ranger dispatch testing.',
+        },
+        {
+            'title': 'Viper spotted behind Thrissur round bus stand',
+            'latitude': 10.5276, 'longitude': 76.2144,
+            'location_name': 'Thrissur Swaraj Round',
+            'species_predicted': "Russell's Viper (Daboia russelii)",
+            'common_name': 'Chitraj',
+            'venom_category': 'HIGHLY_VENOMOUS', 'toxicity_level': 'CRITICAL',
+            'danger_score': 96, 'ai_confidence': 89.0,
+            'notes': 'Demo far-away incident — should show different rangers.',
+        },
+    ]
+    dispatcher = User.objects.filter(username='john_citizen').first()
+    for dr in dispatch_reports:
+        exists = SightingReport.objects.filter(title=dr['title']).exists()
+        if not exists and dispatcher:
+            SightingReport.objects.create(user=dispatcher, **dr)
+    print("Dispatch demo reports seeded (Kollam + Thrissur).")
 
     print("Demo Data Seeding Finished Successfully!")
 

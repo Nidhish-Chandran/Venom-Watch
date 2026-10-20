@@ -9,10 +9,7 @@ from django.contrib.auth.models import User
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.urls import reverse
 
-try:
-    from accounts.models import UserProfile
-except ImportError:
-    UserProfile = None
+from accounts.models import UserProfile
 from ai.services import SnakebiteScreeningService, WoundScreeningService
 
 
@@ -140,16 +137,15 @@ class WoundCheckerViewTestCase(TestCase):
     def setUp(self):
         self.client = Client()
         self.user = User.objects.create_user('testcitizen', 'citizen@example.com', 'Pass123!Secure')
-        if UserProfile and hasattr(self.user, 'profile'):
-            self.user.profile.role = getattr(UserProfile, 'ROLE_CITIZEN', 'citizen')
-            self.user.profile.account_status = getattr(UserProfile, 'ACCOUNT_ACTIVE', 'ACTIVE')
-            self.user.profile.save()
+        self.user.profile.role = UserProfile.ROLE_CITIZEN
+        self.user.profile.account_status = UserProfile.ACCOUNT_ACTIVE
+        self.user.profile.save()
 
     def test_unauthenticated_user_redirected_to_login(self):
         """Unauthenticated requests must be redirected to login."""
         response = self.client.get('/ai/wound-check/')
         self.assertEqual(response.status_code, 302)
-        self.assertTrue('/login/' in response.url or '/accounts/login/' in response.url)
+        self.assertIn('/accounts/login/', response.url)
 
     def test_authenticated_user_can_access_wound_checker_page(self):
         """Authenticated citizen can access the wound screening upload page."""

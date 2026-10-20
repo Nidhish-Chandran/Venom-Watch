@@ -18,7 +18,6 @@ from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
-
 from accounts import views as accounts_views
 
 urlpatterns = [
@@ -31,7 +30,6 @@ urlpatterns = [
     path('emergency/', include('emergency.urls')),
     path('ranger/', include('ranger.urls')),
     path('media/verification_docs/<path:path>', accounts_views.protected_media_block_view),
-    path('snake-detector/', include('snake_detector.urls')),
 ]
 
 if settings.DEBUG:

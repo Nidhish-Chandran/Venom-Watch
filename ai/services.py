@@ -3,7 +3,6 @@ import time
 import threading
 import hashlib
 import numpy as np
-import cv2
 from django.conf import settings
 import logging
 
@@ -355,7 +354,6 @@ class SnakeAIPipelineService:
 
 # Backward compatibility alias
 SnakeAIDetectionService = SnakeAIPipelineService
-
 
 
 class SnakebiteScreeningService:
