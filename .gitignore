@@ -1,11 +1,13 @@
 # Python
 __pycache__/
 *.py[cod]
+*$py.class
 *.egg-info/
 dist/
 build/
 .eggs/
 *.egg
+.pytest_cache/
 
 # Virtual Environment
 venv/
@@ -14,14 +16,21 @@ env/
 
 # Environment Variables
 .env
+*.env
 
-# Media (user uploads)
+# Media (user and runtime uploads)
 media/uploads/*
 media/results/*
 !media/uploads/.gitkeep
 !media/results/.gitkeep
+media/verification_docs/
+media/assignment_outcomes/
+media/wounds/
+media/sightings/
+media/processed_sightings/
+media/processed_wounds/
 
-# Model Weights (large files — use Git LFS or external storage)
+# Model Weights
 weights/*.pt
 weights/*.pth
 !weights/.gitkeep
@@ -35,14 +44,8 @@ weights/*.pth
 .DS_Store
 Thumbs.db
 
-# Django
+# Django & Database
 *.log
 local_settings.py
 db.sqlite3
 db.sqlite3-journal
-# Test and runtime uploads
-media/verification_docs/
-media/assignment_outcomes/
-media/wounds/
-media/sightings/
-

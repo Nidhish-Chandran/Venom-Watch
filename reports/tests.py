@@ -285,7 +285,7 @@ class ReportingAndRiskZoneLifecycleTestCase(TestCase):
 
     def test_report_numbering_and_reference_per_citizen(self):
         """
-        Verifies the resolution of the #12 bug:
+        Verifies:
         - The user's first report is numbered #1 for that citizen.
         - Subsequent reports increment sequentially for that citizen (#2).
         - Different citizens have independent submission counters starting at #1.
@@ -379,7 +379,6 @@ class ReportingAndRiskZoneLifecycleTestCase(TestCase):
             files={'original_image': dummy_img}
         )
         self.assertTrue(form_valid.is_valid(), f"Form errors: {form_valid.errors}")
-
     def test_risk_zone_lifecycle_and_distinct_incident_counting(self):
         """
         Tests the 4-state lifecycle and duplicate deduplication:
@@ -1153,6 +1152,7 @@ class AuthorityRangerLifecycleProtectionTestCase(TestCase):
         self.assertIn('Verified Incident Resolution', content_resolved)
         self.assertIn('Approved Response Evidence Photo:', content_resolved)
         self.assertIn('evidence', content_resolved)
+
 
 
 

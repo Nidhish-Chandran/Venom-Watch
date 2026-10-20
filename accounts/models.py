@@ -11,12 +11,14 @@ class UserProfile(models.Model):
     ROLE_RANGER = 'ranger'
     ROLE_AUTHORITY = 'authority'
     ROLE_ADMIN = 'admin'
+    ROLE_RESPONDER = 'responder'
 
     ROLE_CHOICES = [
         (ROLE_CITIZEN, 'Citizen / General Public'),
         (ROLE_RANGER, 'Forest Ranger (Field Responder)'),
         (ROLE_AUTHORITY, 'Authority Officer (Dispatch & Verification)'),
         (ROLE_ADMIN, 'Platform Administrator'),
+        (ROLE_RESPONDER, 'Medical / Emergency Responder'),
     ]
 
     # Roles a visitor may apply/register for
@@ -110,7 +112,7 @@ class UserProfile(models.Model):
 
     @property
     def is_responder(self):
-        return self.is_ranger or self.is_admin
+        return self.is_ranger or self.is_admin or self.role in [self.ROLE_RESPONDER, self.ROLE_AUTHORITY, self.ROLE_RANGER] or self.user.is_superuser
 
     @property
     def phone(self):
@@ -283,6 +285,7 @@ class AuditLog(models.Model):
             details=details,
             ip_address=ip_address
         )
+
 
 
 @receiver(post_save, sender=User)
