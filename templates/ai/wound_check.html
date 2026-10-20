@@ -1,111 +1,135 @@
 {% extends 'base.html' %}
 
-{% block title %}Snakebite Wound Checker - Venom Watch{% endblock %}
+{% block title %}Snakebite Wound Checker — Venom Watch{% endblock %}
 
 {% block content %}
 <div class="container py-4">
     <div class="row justify-content-center">
         <div class="col-lg-8">
 
-            <!-- Title Card -->
-            <div class="card-clean p-4 mb-4">
-                <h3 class="fw-bold text-dark mb-1">
-                    <i class="fa-solid fa-bandage text-warning me-2"></i> Snakebite Wound Image Checker
-                </h3>
-                <p class="text-secondary small mb-0">AI-assisted visual screening tool to detect potential dual puncture mark patterns and bite mark erythema.</p>
+            <!-- Page Header -->
+            <div class="mb-4">
+                <h2 class="fw-bold mb-1" style="font-size: 1.3rem; color: var(--text);">
+                    <i class="fa-solid fa-bandage me-2" style="color: var(--primary);"></i>
+                    Snakebite Wound Checker
+                </h2>
+                <p class="text-muted mb-0" style="font-size: 0.8125rem;">
+                    AI-assisted wound image screening using EfficientNetB0 deep learning.
+                </p>
             </div>
 
-            <!-- Mandatory Disclaimer Box -->
-            <div class="alert alert-warning border-warning card-clean p-3 mb-4" role="alert">
-                <div class="d-flex align-items-start gap-3">
-                    <i class="fa-solid fa-triangle-exclamation fs-3 text-warning"></i>
-                    <div>
-                        <strong class="text-dark d-block">MANDATORY MEDICAL DISCLAIMER</strong>
-                        <span class="small text-dark">
-                            This is an AI-assisted screening tool and is <strong>NOT a medical diagnosis</strong>. 
-                            If a snakebite is suspected, seek emergency medical care immediately regardless of the tool output.
-                        </span>
-                    </div>
+            <!-- Medical Disclaimer -->
+            <div class="alert alert-warning d-flex align-items-start gap-3 mb-4">
+                <i class="fa-solid fa-triangle-exclamation mt-1 flex-shrink-0" style="color: var(--warning);"></i>
+                <div>
+                    <strong style="font-size: 0.875rem; color: var(--text);">Mandatory Medical Disclaimer</strong>
+                    <p class="mb-0 text-muted" style="font-size: 0.8125rem;">
+                        This is an AI screening tool, <strong>not a medical diagnosis</strong>.
+                        If a snakebite is suspected, seek emergency medical care immediately regardless of output.
+                    </p>
                 </div>
             </div>
 
-            <!-- Upload Form Card -->
+            <!-- Upload Form -->
             <div class="card-clean p-4 mb-4">
-                <form method="post" enctype="multipart/form-data">
+                <form method="post" enctype="multipart/form-data" id="woundForm" autocomplete="off">
                     {% csrf_token %}
-                    
+
                     <div class="mb-3">
-                        <label class="form-label fw-semibold">Upload Wound / Bite Mark Photo *</label>
-                        <input type="file" name="wound_image" class="form-control" accept="image/*" required id="woundInput">
-                        <small class="text-muted">High resolution, clear lighting photo of the suspected bite area recommended.</small>
+                        <label class="form-label" for="woundInput">Upload Wound / Bite Mark Photo *</label>
+                        <input type="file" name="wound_image" class="form-control" accept="image/*"
+                               required id="woundInput">
+                        <div class="form-text">
+                            High resolution, clear lighting photo of the suspected bite area recommended.
+                        </div>
                     </div>
 
                     <!-- Image Preview -->
-                    <div id="woundPreviewContainer" class="mb-3 d-none text-center p-2 rounded bg-light border">
-                        <img id="woundPreview" src="#" alt="Selected Image" class="img-fluid rounded" style="max-height: 250px;">
+                    <div id="woundPreviewContainer" class="mb-3 d-none text-center p-3 rounded border"
+                         style="background: var(--surface-hover);">
+                        <img id="woundPreview" src="#" alt="Selected Image"
+                             class="img-fluid rounded" style="max-height: 240px;">
                     </div>
 
-                    <div class="d-flex justify-content-between align-items-center mt-4">
-                        <div class="d-flex gap-2">
-                            <a href="{% url 'emergency:assistance' %}" class="btn btn-outline-secondary btn-sm">
-                                <i class="fa-solid fa-phone me-1"></i> Emergency Helpline
-                            </a>
-                            <form method="post" action="{% url 'accounts:logout' %}" class="d-inline">
-                                {% csrf_token %}
-                                <button type="submit" class="btn btn-outline-danger btn-sm">
-                                    <i class="fa-solid fa-right-from-bracket me-1"></i> Logout
-                                </button>
-                            </form>
-                        </div>
-                        <button type="submit" class="btn btn-teal">
-                            <i class="fa-solid fa-microscope me-2"></i> Run AI Wound Screening
+                    <div class="d-flex justify-content-between align-items-center mt-3">
+                        <a href="{% url 'emergency:assistance' %}" class="btn btn-outline-secondary btn-sm">
+                            <i class="fa-solid fa-phone me-1"></i> Emergency Helpline
+                        </a>
+                        <button type="submit" id="runScreeningBtn" class="btn btn-teal">
+                            <i class="fa-solid fa-microscope me-2"></i> Run AI Screening
                         </button>
                     </div>
                 </form>
             </div>
 
-            <!-- Screening Result Card -->
+            <!-- Errors -->
+            {% if error %}
+                <div class="alert alert-danger py-2" style="font-size: 0.85rem;">
+                    <i class="fa-solid fa-triangle-exclamation me-2"></i>{{ error }}
+                </div>
+            {% endif %}
+
+            <!-- Screening Result (rendered fresh from the model for THIS upload only) -->
             {% if result %}
-                <div class="card-clean p-4 border-2 {% if result.is_snake_bite %}card-danger-clean{% else %}card-success-clean{% endif %}">
-                    <h5 class="fw-bold mb-2">AI-Assisted Screening Output</h5>
-                    
-                    <div class="d-flex align-items-center gap-2 mb-3">
+                <div class="card-clean p-4 {% if result.is_snake_bite %}card-danger-clean{% else %}card-success-clean{% endif %}">
+
+                    <!-- Result Header -->
+                    <div class="d-flex align-items-center justify-content-between mb-3 pb-2 border-bottom">
+                        <h5 class="fw-semibold mb-0" style="font-size: 0.9375rem; color: var(--text);">
+                            AI Screening Result
+                            {% if analysis_id %}
+                                <small class="text-muted fw-normal ms-2" style="font-size: 0.7rem;"
+                                       title="Unique ID for this fresh analysis run">
+                                    #{{ analysis_id|slice:":8" }}
+                                </small>
+                            {% endif %}
+                        </h5>
                         {% if result.is_snake_bite %}
-                            <span class="badge bg-danger fs-6 px-3 py-2">
-                                <i class="fa-solid fa-triangle-exclamation me-1"></i> Result: {{ result.result_label }}
-                            </span>
-                            <span class="badge bg-outline-danger border text-danger fs-6 px-2 py-1">
-                                {{ result.status_title }}
+                            <span class="badge" style="background: var(--danger-light); color: var(--danger);">
+                                <i class="fa-solid fa-triangle-exclamation me-1"></i> {{ result.result_label }}
                             </span>
                         {% else %}
-                            <span class="badge bg-success fs-6 px-3 py-2">
-                                <i class="fa-solid fa-circle-check me-1"></i> Result: {{ result.result_label }}
-                            </span>
-                            <span class="badge bg-outline-success border text-success fs-6 px-2 py-1">
-                                {{ result.status_title }}
+                            <span class="badge" style="background: var(--success-light); color: var(--success);">
+                                <i class="fa-solid fa-circle-check me-1"></i> {{ result.result_label }}
                             </span>
                         {% endif %}
                     </div>
 
-                    {% if result.processed_image_path %}
-                        <div class="text-center mb-3 p-2 bg-light rounded border">
-                            <img src="/media/{{ result.processed_image_path }}" alt="Annotated Screening" class="img-fluid rounded" style="max-height: 250px;">
-                            <small class="text-muted d-block mt-1">Diagnostic feature contour overlay</small>
-                        </div>
-                    {% endif %}
-
-                    <div class="p-3 bg-light rounded border mb-3">
-                        <p class="mb-1 text-dark fw-medium">{{ result.recommendation }}</p>
-                        <small class="text-muted d-block mt-2"><strong>Method:</strong> {{ result.method_label }}</small>
+                    <!-- Status Label with Confidence -->
+                    <div class="mb-3">
+                        <p class="fw-semibold mb-1" style="font-size: 0.875rem; color: var(--text);">
+                            {{ result.status_title }}
+                        </p>
+                        {% if result.confidence %}
+                            <p class="mb-0" style="font-size: 0.8125rem; color: var(--text-secondary);">
+                                Screening confidence: <strong>{{ result.confidence }}%</strong>
+                            </p>
+                        {% endif %}
+                        {% if result.uncertain %}
+                            <p class="mb-0" style="font-size: 0.75rem; color: var(--warning);">
+                                <i class="fa-solid fa-circle-exclamation me-1"></i> Low confidence prediction
+                            </p>
+                        {% endif %}
                     </div>
 
-                    <div class="alert alert-danger py-2 mb-3 small">
+                    <!-- Recommendation -->
+                    <div class="p-3 rounded border mb-3" style="background: var(--surface-hover);">
+                        <p class="fw-medium mb-1" style="font-size: 0.875rem; color: var(--text);">
+                            {{ result.recommendation }}
+                        </p>
+                        <small class="text-muted">
+                            <strong>Method:</strong> {{ result.method_label }}
+                        </small>
+                    </div>
+
+                    <!-- Disclaimer -->
+                    <div class="alert alert-danger py-2 mb-3" style="font-size: 0.8rem;">
                         <strong>Disclaimer:</strong> {{ result.disclaimer }}
                     </div>
 
-                    <div class="d-flex justify-content-end gap-2">
-                        <a href="{% url 'emergency:assistance' %}" class="btn btn-danger-venom">
-                            <i class="fa-solid fa-hospital me-2"></i> Locate Anti-Venom Hospitals (Haversine)
+                    <div class="d-flex justify-content-end">
+                        <a href="{% url 'emergency:assistance' %}" class="btn btn-danger-venom btn-sm">
+                            <i class="fa-solid fa-hospital me-2"></i> Locate Anti-Venom Hospitals
                         </a>
                     </div>
                 </div>
@@ -119,9 +143,20 @@
 {% block extra_js %}
 <script>
     document.addEventListener("DOMContentLoaded", function() {
+        const form = document.getElementById("woundForm");
         const input = document.getElementById("woundInput");
         const container = document.getElementById("woundPreviewContainer");
         const preview = document.getElementById("woundPreview");
+        const submitBtn = document.getElementById("runScreeningBtn");
+
+        // Prevent browsers (Chrome/Edge "back-forward cache") from restoring a
+        // stale page with the PREVIOUS report after back-navigation. If the page
+        // is restored from history, force a fresh reload so no old result lingers.
+        window.addEventListener("pageshow", function(event) {
+            if (event.persisted) {
+                window.location.reload();
+            }
+        });
 
         if (input) {
             input.addEventListener("change", function() {
@@ -134,6 +169,26 @@
                     }
                     reader.readAsDataURL(file);
                 }
+            });
+        }
+
+        if (form && submitBtn) {
+            form.addEventListener("submit", function() {
+                // A new screening always runs the model again on the newly
+                // selected photo — show progress and require a file.
+                if (!input || !input.files || !input.files[0]) {
+                    return; // let native required-validation handle it
+                }
+                submitBtn.disabled = true;
+                submitBtn.innerHTML =
+                    '<span class="spinner-border spinner-border-sm me-2" role="status"></span>' +
+                    'Running Model…';
+                // Safety net: re-enable if the browser blocks/aborts the POST
+                setTimeout(function() {
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML =
+                        '<i class="fa-solid fa-microscope me-2"></i> Run AI Screening';
+                }, 120000);
             });
         }
     });

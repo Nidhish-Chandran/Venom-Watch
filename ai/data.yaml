@@ -1,0 +1,18 @@
+# ============================================
+# YOLO Training Configuration
+# Snake Detection Dataset
+# ============================================
+
+# Dataset root (relative to training working directory)
+path: ../datasets/snake_dataset
+
+# Training and validation image directories
+train: images/train
+val: images/val
+
+# Number of classes
+nc: 1
+
+# Class names
+names:
+  0: snake
