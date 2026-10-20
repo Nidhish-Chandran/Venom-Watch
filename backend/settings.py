@@ -52,6 +52,7 @@ INSTALLED_APPS = [
     'dashboard',
     'hotspots',
     'ranger',
+    'reports',
 ]
 
 # ============================================

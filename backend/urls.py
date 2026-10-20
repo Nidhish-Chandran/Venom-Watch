@@ -12,7 +12,8 @@ urlpatterns = [
     path('ai/', include('ai.urls')),
     path('dashboard/', include('dashboard.urls')),
     path('hotspots/', include('hotspots.urls')),
-    path('ranger/', include('ranger.urls')),  # App routes
+    path('ranger/', include('ranger.urls')),
+    path('reports/', include('reports.urls')),  # App routes
 ]
 
 # Serve media files during development

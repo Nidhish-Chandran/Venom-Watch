@@ -1,0 +1,311 @@
+from django.db import models
+from django.contrib.auth.models import User
+from django.utils import timezone
+from datetime import timedelta
+
+class SightingReport(models.Model):
+    STATUS_PENDING = 'PENDING'
+    STATUS_VERIFIED = 'VERIFIED'
+    STATUS_REJECTED = 'REJECTED'
+    STATUS_RESOLVED = 'RESOLVED'
+
+    STATUS_CHOICES = [
+        (STATUS_PENDING, 'Pending AI & Authority Verification'),
+        (STATUS_VERIFIED, 'Verified Sighting'),
+        (STATUS_REJECTED, 'Rejected / False Alarm'),
+        (STATUS_RESOLVED, 'Captured / Area Cleared'),
+    ]
+
+    VENOM_HIGHLY = 'HIGHLY_VENOMOUS'
+    VENOM_MODERATE = 'VENOMOUS'
+    VENOM_SAFE = 'NON_VENOMOUS'
+
+    VENOM_CHOICES = [
+        (VENOM_HIGHLY, 'Highly Venomous'),
+        (VENOM_MODERATE, 'Venomous'),
+        (VENOM_SAFE, 'Non-Venomous'),
+    ]
+
+    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='reports')
+    title = models.CharField(max_length=200, default="Snake Sighting")
+    original_image = models.ImageField(upload_to='sightings/')
+    processed_image = models.ImageField(upload_to='processed_sightings/', blank=True, null=True)
+    
+    # GPS Coordinates
+    latitude = models.FloatField(help_text="Latitude in decimal degrees")
+    longitude = models.FloatField(help_text="Longitude in decimal degrees")
+    location_name = models.CharField(max_length=255, help_text="Street, District, or Landmark Name")
+
+    # Status & Timestamps
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_PENDING)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    # AI Detection Metadata
+    ai_detected = models.BooleanField(default=False)
+    snake_detected = models.BooleanField(default=False)
+    snake_confidence = models.FloatField(default=0.0, null=True, blank=True)
+    venomous = models.BooleanField(null=True, blank=True)
+    venom_confidence = models.FloatField(default=0.0, null=True, blank=True)
+    species_predicted = models.CharField(max_length=150, blank=True, null=True)
+    common_name = models.CharField(max_length=150, blank=True, null=True)
+    venom_category = models.CharField(max_length=30, choices=VENOM_CHOICES, default=VENOM_SAFE)
+    toxicity_level = models.CharField(max_length=50, default='SAFE')
+    danger_score = models.IntegerField(default=10)
+    ai_confidence = models.FloatField(default=0.0)
+    model_1_name = models.CharField(max_length=150, default="venomwatch_cnn2_final (CNN)")
+    model_2_name = models.CharField(max_length=150, default="venom_watch_cnn2_keras")
+    notes = models.TextField(blank=True, null=True, help_text="Additional observer details")
+
+    # Authority Verification & Task Assignment
+    verified_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='verified_reports')
+    authority_notes = models.TextField(blank=True, null=True)
+
+    # Duplicate & Spam Detection Flags
+    duplicate_flag = models.BooleanField(default=False, help_text="Flagged as potential duplicate sighting")
+    duplicate_of = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, blank=True, related_name='duplicates')
+    duplicate_score = models.IntegerField(default=0, help_text="Calculated duplicate likelihood score (0-100)")
+    duplicate_reason = models.CharField(max_length=255, blank=True, null=True, help_text="Explanation for duplicate classification")
+    spam_flag = models.BooleanField(default=False, help_text="Flagged as suspicious/spam submission")
+    spam_reason = models.CharField(max_length=255, blank=True, null=True)
+
+    # Volunteer / Responder Incident Task Assignment
+    RESPONSE_UNASSIGNED = 'UNASSIGNED'
+    RESPONSE_ASSIGNED = 'ASSIGNED'
+    RESPONSE_IN_PROGRESS = 'IN_PROGRESS'
+    RESPONSE_DISPATCHED = 'IN_PROGRESS'
+    RESPONSE_RESOLVED = 'RESOLVED'
+
+    RESPONSE_STATUS_CHOICES = [
+        (RESPONSE_UNASSIGNED, 'Unassigned'),
+        (RESPONSE_ASSIGNED, 'Responder Assigned'),
+        (RESPONSE_IN_PROGRESS, 'Response in Progress'),
+        (RESPONSE_RESOLVED, 'Captured / Resolved'),
+    ]
+
+    assigned_responder = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='assigned_tasks')
+    response_status = models.CharField(max_length=20, choices=RESPONSE_STATUS_CHOICES, default=RESPONSE_UNASSIGNED)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.species_predicted or 'Snake'} - {self.location_name} ({self.created_at.strftime('%Y-%m-%d %H:%M')})"
+
+    @property
+    def is_active_48h(self):
+        """Checks if the sighting report occurred within the last 48 hours for DBSCAN hotspot clustering."""
+        return self.created_at >= timezone.now() - timedelta(hours=48)
+
+    @property
+    def is_venomous(self):
+        return self.venom_category in [self.VENOM_HIGHLY, self.VENOM_MODERATE]
+
+    @property
+    def image(self):
+        """Convenience accessor returning processed_image if available, otherwise original_image."""
+        return self.processed_image or self.original_image
+
+    @property
+    def report_reference(self):
+        """Permanent unique incident reference identifier, e.g. VW-0012."""
+        return f"VW-{self.pk:04d}"
+
+    @property
+    def citizen_submission_number(self):
+        """Chronological submission sequence number for this specific citizen."""
+        if not self.user_id:
+            return 1
+        # Count reports submitted by this user up to this report ID
+        return SightingReport.objects.filter(user_id=self.user_id, id__lte=self.id).count()
+
+    def get_ranger_incident_number(self, ranger):
+        """Return sequential incident number (1-based) for this sighting relative to the specified ranger."""
+        if not ranger or not self.id:
+            return 1
+        ranger_id = ranger.id if hasattr(ranger, 'id') else ranger
+        sighting_map = RangerAssignment.get_ranger_sighting_map(ranger_id)
+        return sighting_map.get(self.id, 1)
+
+    @property
+    def ranger_incident_number(self):
+        """Accessor for pre-annotated ranger incident number, or None."""
+        return getattr(self, '_ranger_incident_number', None)
+
+    @property
+    def latest_assignment(self):
+        """The most recent assignment created for this incident."""
+        return self.ranger_assignments.first()
+
+    @property
+    def active_assignment(self):
+        """The currently active assignment for this incident (if any)."""
+        return self.ranger_assignments.filter(status__in=RangerAssignment.ACTIVE_STATUSES).first()
+
+    @property
+    def verified_outcome_assignment(self):
+        """The completed assignment whose outcome was approved by Authority."""
+        return self.ranger_assignments.filter(status=RangerAssignment.STATUS_COMPLETED, review_decision='APPROVED').first()
+
+    @property
+    def is_resolved(self):
+        """Returns True if the incident is verified and resolved."""
+        return self.status == self.STATUS_RESOLVED or self.response_status == self.RESPONSE_RESOLVED
+
+    @property
+    def resolved_outcome_display(self):
+        """Human-readable display of the actual recorded resolution outcome."""
+        completed_assignment = self.ranger_assignments.filter(
+            status=RangerAssignment.STATUS_COMPLETED
+        ).first()
+        if completed_assignment and completed_assignment.outcome:
+            return completed_assignment.get_outcome_display()
+        if self.status == self.STATUS_RESOLVED:
+            return self.get_status_display()
+        return "Captured / Area Cleared"
+
+
+class RangerAssignment(models.Model):
+    """Formal incident assignment linking a SightingReport to a Ranger.
+
+    Object-level security: only the assigned ranger (and Authority/Admin)
+    may view or act on an assignment. Assignments are created by an
+    Authority user for a specific sighting report.
+    """
+
+    STATUS_ASSIGNED = 'ASSIGNED'
+    STATUS_ACCEPTED = 'ACCEPTED'
+    STATUS_ON_THE_WAY = 'ON_THE_WAY'
+    STATUS_AT_LOCATION = 'AT_LOCATION'
+    STATUS_OUTCOME_SUBMITTED = 'OUTCOME_SUBMITTED'
+    STATUS_COMPLETED = 'COMPLETED'
+    STATUS_DECLINED = 'DECLINED'
+    STATUS_CANCELLED = 'CANCELLED'
+
+    STATUS_CHOICES = [
+        (STATUS_ASSIGNED, 'Assigned'),
+        (STATUS_ACCEPTED, 'Accepted'),
+        (STATUS_ON_THE_WAY, 'On the way'),
+        (STATUS_AT_LOCATION, 'At location'),
+        (STATUS_OUTCOME_SUBMITTED, 'Outcome Submitted (Under Review)'),
+        (STATUS_COMPLETED, 'Completed / Verified'),
+        (STATUS_DECLINED, 'Declined'),
+        (STATUS_CANCELLED, 'Cancelled'),
+    ]
+
+    ACTIVE_STATUSES = [STATUS_ASSIGNED, STATUS_ACCEPTED, STATUS_ON_THE_WAY, STATUS_AT_LOCATION, STATUS_OUTCOME_SUBMITTED]
+
+    OUTCOME_CAPTURED = 'SNAKE_CAPTURED'
+    OUTCOME_RELOCATED = 'SNAKE_RELOCATED'
+    OUTCOME_ESCAPED = 'SNAKE_ESCAPED'
+    OUTCOME_UNRESOLVED = 'UNRESOLVED'
+    OUTCOME_OTHER = 'OTHER'
+
+    OUTCOME_CHOICES = [
+        (OUTCOME_CAPTURED, 'Snake Safely Captured'),
+        (OUTCOME_RELOCATED, 'Snake Safely Relocated'),
+        (OUTCOME_ESCAPED, 'Snake Escaped / Not Located'),
+        ('REFERRED_OTHER_TEAM', 'Incident Referred to Another Response Team'),
+        (OUTCOME_UNRESOLVED, 'Incident Unresolved'),
+        ('REPORT_UNVERIFIED', 'Report Could Not Be Verified'),
+        (OUTCOME_OTHER, 'Other Justified Outcome'),
+    ]
+
+    REVIEW_CHOICES = [
+        ('PENDING_REVIEW', 'Pending Authority Review'),
+        ('APPROVED', 'Outcome Approved'),
+        ('REJECTED', 'Outcome Rejected'),
+        ('CLARIFICATION_REQUESTED', 'Clarification Requested'),
+    ]
+
+    # Allowed status transitions: Ranger cannot self-complete; only Authority review verifies & completes.
+    ALLOWED_TRANSITIONS = {
+        STATUS_ASSIGNED: {STATUS_ACCEPTED, STATUS_DECLINED},
+        STATUS_ACCEPTED: {STATUS_ON_THE_WAY},
+        STATUS_ON_THE_WAY: {STATUS_AT_LOCATION},
+        STATUS_AT_LOCATION: {STATUS_OUTCOME_SUBMITTED},
+        STATUS_OUTCOME_SUBMITTED: {STATUS_COMPLETED, STATUS_AT_LOCATION, STATUS_CANCELLED},
+    }
+
+    sighting = models.ForeignKey(SightingReport, on_delete=models.CASCADE, related_name='ranger_assignments')
+    ranger = models.ForeignKey(User, on_delete=models.PROTECT, related_name='ranger_assignments',
+                               limit_choices_to={'profile__role': 'ranger'})
+    assigned_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True,
+                                    related_name='assignments_created')
+    assigned_at = models.DateTimeField(auto_now_add=True)
+    responded_at = models.DateTimeField(null=True, blank=True,
+                                        help_text="When the ranger accepted or declined")
+    outcome_submitted_at = models.DateTimeField(null=True, blank=True,
+                                                help_text="When ranger submitted response outcome for review")
+    completed_at = models.DateTimeField(null=True, blank=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_ASSIGNED)
+    distance_km = models.FloatField(null=True, blank=True,
+                                    help_text="Haversine distance from ranger base to report at assignment time")
+    outcome = models.CharField(max_length=30, choices=OUTCOME_CHOICES, blank=True, null=True)
+    notes = models.TextField(blank=True, null=True, help_text="Ranger field notes captured at completion")
+    outcome_image = models.ImageField(upload_to='assignment_outcomes/', blank=True, null=True)
+    is_read = models.BooleanField(default=False)
+    read_at = models.DateTimeField(null=True, blank=True)
+
+    # Authority outcome verification & audit trail
+    reviewed_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True,
+                                    related_name='assignments_reviewed')
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+    review_decision = models.CharField(max_length=30, choices=REVIEW_CHOICES, blank=True, null=True)
+    review_notes = models.TextField(blank=True, null=True, help_text="Authority review comments or rejection rationale")
+
+    class Meta:
+        ordering = ['-assigned_at']
+
+    def __str__(self):
+        return f"Assignment #{self.pk} - Report #{self.sighting_id} -> {self.ranger.username} ({self.status})"
+
+    @property
+    def is_active(self):
+        return self.status in self.ACTIVE_STATUSES
+
+    def can_transition(self, new_status):
+        return new_status in self.ALLOWED_TRANSITIONS.get(self.status, set())
+
+    @property
+    def next_action(self):
+        """The single next action button label/status for the ranger workflow."""
+        nxt = {
+            self.STATUS_ASSIGNED: self.STATUS_ACCEPTED,
+            self.STATUS_ACCEPTED: self.STATUS_ON_THE_WAY,
+            self.STATUS_ON_THE_WAY: self.STATUS_AT_LOCATION,
+            self.STATUS_AT_LOCATION: self.STATUS_OUTCOME_SUBMITTED,
+            self.STATUS_OUTCOME_SUBMITTED: None,
+        }
+        return nxt.get(self.status)
+
+    @classmethod
+    def get_ranger_sighting_map(cls, ranger_id):
+        """
+        Returns a dict mapping sighting_id -> 1-based sequential incident number
+        for distinct sightings assigned to the given ranger, ordered by earliest assignment creation time.
+        """
+        if not ranger_id:
+            return {}
+        from django.db.models import Min
+        qs = (
+            cls.objects.filter(ranger_id=ranger_id)
+            .values('sighting_id')
+            .annotate(first_assigned=Min('assigned_at'), min_id=Min('id'))
+            .order_by('first_assigned', 'min_id')
+        )
+        return {row['sighting_id']: idx for idx, row in enumerate(qs, start=1)}
+
+    @property
+    def ranger_incident_number(self):
+        """
+        Returns the ranger-specific sequential incident number for the sighting of this assignment.
+        Uses cached `_ranger_incident_number` if available, otherwise queries the ranger sighting map.
+        """
+        if hasattr(self, '_ranger_incident_number') and self._ranger_incident_number is not None:
+            return self._ranger_incident_number
+        if hasattr(self, 'sighting') and hasattr(self.sighting, '_ranger_incident_number') and self.sighting._ranger_incident_number is not None:
+            return self.sighting._ranger_incident_number
+        s_map = self.get_ranger_sighting_map(self.ranger_id)
+        return s_map.get(self.sighting_id, 1)
+
