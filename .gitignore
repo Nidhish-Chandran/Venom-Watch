@@ -1,0 +1,51 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+dist/
+build/
+.eggs/
+*.egg
+.pytest_cache/
+
+# Virtual Environment
+venv/
+env/
+.venv/
+
+# Environment Variables
+.env
+*.env
+
+# Media (user and runtime uploads)
+media/uploads/*
+media/results/*
+!media/uploads/.gitkeep
+!media/results/.gitkeep
+media/verification_docs/
+media/assignment_outcomes/
+media/wounds/
+media/sightings/
+media/processed_sightings/
+media/processed_wounds/
+
+# Model Weights
+weights/*.pt
+weights/*.pth
+!weights/.gitkeep
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Django & Database
+*.log
+local_settings.py
+db.sqlite3
+db.sqlite3-journal

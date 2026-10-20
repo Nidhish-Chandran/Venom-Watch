@@ -1,0 +1,300 @@
+{% extends 'base.html' %}
+
+{% block title %}Assignment #{{ assignment.pk }} — Ranger Console — Venom Watch{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <a href="{% url 'ranger:assignments' %}" class="text-decoration-none d-inline-flex align-items-center gap-1"
+       style="font-size: 0.8125rem; color: var(--text-muted);">
+        <i class="fa-solid fa-arrow-left"></i> Back to My Assignments
+    </a>
+
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mt-2 mb-4">
+        <h2 class="fw-bold mb-0" style="font-size: 1.2rem; color: var(--text);">
+            Snake Sighting #{{ assignment.ranger_incident_number }}
+        </h2>
+        {% if assignment.status == 'ASSIGNED' %}
+            <span class="badge" style="background: var(--warning-light); color: var(--warning);">NEW ASSIGNMENT — Awaiting your response</span>
+        {% elif assignment.status == 'COMPLETED' %}
+            <span class="badge" style="background: var(--success-light); color: var(--success);">Completed</span>
+        {% elif assignment.status == 'DECLINED' %}
+            <span class="badge bg-secondary">Declined</span>
+        {% elif assignment.status == 'CANCELLED' %}
+            <span class="badge bg-secondary">Cancelled by Authority</span>
+        {% else %}
+            <span class="badge" style="background: var(--info-light); color: var(--info);">{{ assignment.get_status_display }}</span>
+        {% endif %}
+    </div>
+
+    <!-- Lifecycle stepper -->
+    {% if assignment.status != 'DECLINED' and assignment.status != 'CANCELLED' %}
+    <div class="card-clean p-3 p-md-4 mb-4">
+        <div class="d-none d-md-flex justify-content-between align-items-center position-relative px-2">
+            <div class="position-absolute top-50 start-0 w-100 translate-middle-y" style="height: 3px; background: var(--border); z-index: 1;"></div>
+            
+            <div class="d-flex flex-column align-items-center position-relative" style="z-index: 2;">
+                <div class="rounded-circle d-flex align-items-center justify-content-center fw-bold shadow-sm"
+                     style="width: 32px; height: 32px; font-size: 0.8rem;
+                     {% if assignment.status == 'ASSIGNED' %}background: var(--primary); color: white; border: 2px solid white;
+                     {% else %}background: var(--success, #16a34a); color: white;{% endif %}">
+                    {% if assignment.status == 'ASSIGNED' %}1{% else %}<i class="fa-solid fa-check"></i>{% endif %}
+                </div>
+                <span class="mt-2 fw-semibold" style="font-size: 0.78rem; {% if assignment.status == 'ASSIGNED' %}color: var(--primary);{% else %}color: var(--text);{% endif %}">Assigned</span>
+            </div>
+
+            <div class="d-flex flex-column align-items-center position-relative" style="z-index: 2;">
+                <div class="rounded-circle d-flex align-items-center justify-content-center fw-bold shadow-sm"
+                     style="width: 32px; height: 32px; font-size: 0.8rem;
+                     {% if assignment.status == 'ACCEPTED' %}background: var(--primary); color: white; border: 2px solid white;
+                     {% elif assignment.status == 'ON_THE_WAY' or assignment.status == 'AT_LOCATION' or assignment.status == 'COMPLETED' %}background: var(--success, #16a34a); color: white;
+                     {% else %}background: white; border: 2px solid var(--border); color: var(--text-muted);{% endif %}">
+                    {% if assignment.status == 'ON_THE_WAY' or assignment.status == 'AT_LOCATION' or assignment.status == 'COMPLETED' %}<i class="fa-solid fa-check"></i>{% else %}2{% endif %}
+                </div>
+                <span class="mt-2 fw-semibold" style="font-size: 0.78rem; {% if assignment.status == 'ACCEPTED' %}color: var(--primary);{% else %}color: var(--text-muted);{% endif %}">Accepted</span>
+            </div>
+
+            <div class="d-flex flex-column align-items-center position-relative" style="z-index: 2;">
+                <div class="rounded-circle d-flex align-items-center justify-content-center fw-bold shadow-sm"
+                     style="width: 32px; height: 32px; font-size: 0.8rem;
+                     {% if assignment.status == 'ON_THE_WAY' %}background: var(--primary); color: white; border: 2px solid white;
+                     {% elif assignment.status == 'AT_LOCATION' or assignment.status == 'COMPLETED' %}background: var(--success, #16a34a); color: white;
+                     {% else %}background: white; border: 2px solid var(--border); color: var(--text-muted);{% endif %}">
+                    {% if assignment.status == 'AT_LOCATION' or assignment.status == 'COMPLETED' %}<i class="fa-solid fa-check"></i>{% else %}3{% endif %}
+                </div>
+                <span class="mt-2 fw-semibold" style="font-size: 0.78rem; {% if assignment.status == 'ON_THE_WAY' %}color: var(--primary);{% else %}color: var(--text-muted);{% endif %}">En Route</span>
+            </div>
+
+            <div class="d-flex flex-column align-items-center position-relative" style="z-index: 2;">
+                <div class="rounded-circle d-flex align-items-center justify-content-center fw-bold shadow-sm"
+                     style="width: 32px; height: 32px; font-size: 0.8rem;
+                     {% if assignment.status == 'AT_LOCATION' %}background: var(--primary); color: white; border: 2px solid white;
+                     {% elif assignment.status == 'COMPLETED' %}background: var(--success, #16a34a); color: white;
+                     {% else %}background: white; border: 2px solid var(--border); color: var(--text-muted);{% endif %}">
+                    {% if assignment.status == 'COMPLETED' %}<i class="fa-solid fa-check"></i>{% else %}4{% endif %}
+                </div>
+                <span class="mt-2 fw-semibold" style="font-size: 0.78rem; {% if assignment.status == 'AT_LOCATION' %}color: var(--primary);{% else %}color: var(--text-muted);{% endif %}">At Location</span>
+            </div>
+
+            <div class="d-flex flex-column align-items-center position-relative" style="z-index: 2;">
+                <div class="rounded-circle d-flex align-items-center justify-content-center fw-bold shadow-sm"
+                     style="width: 32px; height: 32px; font-size: 0.8rem;
+                     {% if assignment.status == 'COMPLETED' %}background: var(--success, #16a34a); color: white;
+                     {% else %}background: white; border: 2px solid var(--border); color: var(--text-muted);{% endif %}">
+                    {% if assignment.status == 'COMPLETED' %}<i class="fa-solid fa-check"></i>{% else %}5{% endif %}
+                </div>
+                <span class="mt-2 fw-semibold" style="font-size: 0.78rem; {% if assignment.status == 'COMPLETED' %}color: var(--success, #16a34a);{% else %}color: var(--text-muted);{% endif %}">Completed</span>
+            </div>
+        </div>
+
+        <!-- Mobile stepper view -->
+        <div class="d-flex d-md-none align-items-center justify-content-between p-2 rounded bg-light">
+            <span class="text-muted" style="font-size: 0.8rem;">Current Lifecycle State:</span>
+            <span class="fw-bold" style="color: var(--primary); font-size: 0.85rem;">
+                <i class="fa-solid fa-circle-dot me-1"></i>{{ assignment.get_status_display }}
+            </span>
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="row g-4">
+        <div class="col-lg-7">
+            <div class="card-clean p-4">
+                <h5 class="fw-semibold mb-3" style="font-size: 0.9375rem;">
+                    <i class="fa-solid fa-camera me-2" style="color: var(--primary);"></i> Incident Details
+                </h5>
+                <div class="text-center mb-4 p-2 rounded border" style="background: var(--surface-hover);">
+                    {% if report.original_image %}
+                        <img src="{{ report.original_image.url }}" alt="Sighting" class="img-fluid rounded" style="max-height: 340px;">
+                    {% endif %}
+                </div>
+                <table class="table table-sm mb-0" style="font-size: 0.85rem;">
+                    <tr><th style="width: 40%;">Species (AI)</th><td><b>{{ report.species_predicted|default:"—" }}</b> {{ report.common_name|default:"" }}</td></tr>
+                    <tr><th>Venom status</th><td>
+                        {% if report.is_venomous %}<span class="badge-venomous">Venomous</span>{% else %}<span class="badge-non-venomous">Non-Venomous</span>{% endif %}
+                        {% if report.venom_confidence %}<small class="text-muted ms-1">({{ report.venom_confidence }}% confidence)</small>{% endif %}
+                    </td></tr>
+                    <tr><th>Reported time</th><td>{{ report.created_at|date:"M j, Y H:i" }}</td></tr>
+                    <tr><th>Location</th><td>{{ report.location_name }}</td></tr>
+                    <tr><th>Coordinates</th><td>{{ report.latitude|floatformat:5 }}, {{ report.longitude|floatformat:5 }}</td></tr>
+                    <tr><th>Assigned at</th><td>{{ assignment.assigned_at|date:"M j, Y H:i" }}</td></tr>
+                    {% if report.notes %}<tr><th>Citizen notes</th><td>{{ report.notes }}</td></tr>{% endif %}
+                </table>
+            </div>
+        </div>
+
+        <div class="col-lg-5">
+            <div class="card-clean p-4 mb-4">
+                <h5 class="fw-semibold mb-2" style="font-size: 0.9375rem;">
+                    <i class="fa-solid fa-map-location-dot me-2" style="color: var(--danger);"></i> Incident Location
+                </h5>
+                <div id="assignmentMap" class="map-container mb-2" style="height: 220px;"></div>
+                <small class="text-muted" style="font-size: 0.75rem;"><i class="fa-solid fa-shield-halved me-1"></i>Only this assigned incident location is rendered on your map.</small>
+            </div>
+
+            {% if assignment.status == 'ASSIGNED' %}
+            <div class="card-clean p-4 mb-4 border-start border-warning border-4">
+                <h5 class="fw-semibold mb-2" style="font-size: 0.9375rem; color: var(--text);">Respond to Assignment</h5>
+                <p class="text-muted mb-3" style="font-size: 0.8125rem;">Please review the incident location and confirm if you can dispatch to this site.</p>
+                <div class="d-flex gap-2">
+                    <form method="post" action="{% url 'ranger:assignment_update' pk=assignment.pk %}" class="flex-grow-1 action-feedback-form">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="ACCEPT">
+                        <button type="submit" class="btn btn-teal btn-sm w-100"><i class="fa-solid fa-check me-1"></i> Accept Dispatch</button>
+                    </form>
+                    <form method="post" action="{% url 'ranger:assignment_update' pk=assignment.pk %}" class="action-feedback-form">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="DECLINE">
+                        <button type="submit" class="btn btn-outline-danger btn-sm"><i class="fa-solid fa-xmark me-1"></i> Decline</button>
+                    </form>
+                </div>
+            </div>
+            {% elif next_action %}
+            <div class="card-clean p-4 mb-4 border-start border-teal border-4">
+                <h5 class="fw-semibold mb-2" style="font-size: 0.9375rem; color: var(--text);">Update Dispatch State</h5>
+                <p class="text-muted mb-3" style="font-size: 0.8125rem;">Notify the operations desk and citizen as you progress towards the incident location.</p>
+                <form method="post" action="{% url 'ranger:assignment_update' pk=assignment.pk %}" class="action-feedback-form">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="{{ next_action }}">
+                    <button type="submit" class="btn btn-teal btn-sm w-100 py-2">
+                        {% if next_action == 'ON_THE_WAY' %}<i class="fa-solid fa-truck-fast me-1"></i> Mark as ON THE WAY
+                        {% elif next_action == 'AT_LOCATION' %}<i class="fa-solid fa-location-crosshairs me-1"></i> Mark as AT LOCATION
+                        {% endif %}
+                    </button>
+                </form>
+            </div>
+            {% endif %}
+
+            {% if assignment.status == 'AT_LOCATION' %}
+            <div class="card-clean p-4 mb-4 border-start border-success border-4">
+                <h5 class="fw-semibold mb-2" style="font-size: 0.9375rem; color: var(--text);">Submit Field Outcome</h5>
+                <p class="text-muted mb-3" style="font-size: 0.8125rem;">Record the outcome and upload supporting photo evidence for Authority review and verification.</p>
+                {% if assignment.review_decision == 'REJECTED' %}
+                    <div class="alert alert-danger py-2 mb-3" style="font-size: 0.8125rem;">
+                        <strong><i class="fa-solid fa-triangle-exclamation me-1"></i> Authority Rejection Feedback:</strong>
+                        <p class="mb-0 mt-1">{{ assignment.review_notes|default:"Please verify the area again or provide further documentation." }}</p>
+                    </div>
+                {% elif assignment.review_decision == 'CLARIFICATION_REQUESTED' %}
+                    <div class="alert alert-warning py-2 mb-3" style="font-size: 0.8125rem;">
+                        <strong><i class="fa-solid fa-circle-question me-1"></i> Authority Clarification Request:</strong>
+                        <p class="mb-0 mt-1">{{ assignment.review_notes }}</p>
+                    </div>
+                {% endif %}
+                <form method="post" enctype="multipart/form-data" action="{% url 'ranger:assignment_update' pk=assignment.pk %}" class="action-feedback-form">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="SUBMIT_OUTCOME">
+                    <div class="mb-3">
+                        <label class="form-label" style="font-size:0.8125rem;">Outcome <span class="text-danger">*</span></label>
+                        <select name="outcome" class="form-select form-select-sm" required>
+                            <option value="">— Select outcome —</option>
+                            {% for val, label in assignment.OUTCOME_CHOICES %}
+                                <option value="{{ val }}" {% if assignment.outcome == val %}selected{% endif %}>{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" style="font-size:0.8125rem;">Field Notes <span class="text-danger">*</span></label>
+                        <textarea name="notes" rows="3" class="form-control form-control-sm" placeholder="Details of capture, relocation, search radius, or release…" required>{{ assignment.notes|default:"" }}</textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" style="font-size:0.8125rem;">Outcome Photo / Evidence</label>
+                        <input type="file" name="outcome_image" accept="image/png,image/jpeg,image/webp" class="form-control form-control-sm">
+                        <small class="text-muted d-block mt-1" style="font-size: 0.72rem;">Optional supporting photo of containment bag, release site, or clear scene.</small>
+                    </div>
+                    <button type="submit" class="btn btn-teal btn-sm w-100 py-2">
+                        <i class="fa-solid fa-paper-plane me-1"></i> Submit Outcome for Authority Verification
+                    </button>
+                </form>
+            </div>
+            {% endif %}
+
+            {% if assignment.status == 'OUTCOME_SUBMITTED' %}
+            <div class="card-clean p-4 mb-4 border-start border-info border-4">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <h5 class="fw-semibold mb-0" style="font-size: 0.9375rem;">
+                        <i class="fa-solid fa-hourglass-half me-1" style="color: var(--info, #0284c7);"></i> Under Authority Review
+                    </h5>
+                    <span class="badge" style="background: var(--info-light, #e0f2fe); color: var(--info, #0284c7);">Pending Verification</span>
+                </div>
+                <p class="text-muted mb-2" style="font-size: 0.8125rem;">
+                    Your response outcome was submitted at {{ assignment.outcome_submitted_at|date:"M j, Y H:i" }}. The operations desk is verifying the documentation.
+                </p>
+                <div class="p-3 rounded border mb-2" style="background: var(--surface-hover);">
+                    <p class="mb-1" style="font-size: 0.82rem;"><strong>Reported Outcome:</strong> {{ assignment.get_outcome_display }}</p>
+                    {% if assignment.notes %}<p class="mb-1 text-muted" style="font-size: 0.8rem;"><strong>Notes:</strong> {{ assignment.notes }}</p>{% endif %}
+                    {% if assignment.outcome_image %}
+                        <div class="mt-2">
+                            <span class="text-muted d-block mb-1" style="font-size: 0.75rem;">Submitted Evidence:</span>
+                            <img src="{{ assignment.outcome_image.url }}" class="img-fluid rounded border" style="max-height: 180px;" alt="Evidence">
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+
+            {% if assignment.status == 'COMPLETED' %}
+            <div class="card-clean p-4 mb-4 border-start border-success border-4">
+                <h5 class="fw-semibold mb-2" style="font-size: 0.9375rem;">
+                    <i class="fa-solid fa-circle-check me-1" style="color: var(--success, #16a34a);"></i> Incident Verified &amp; Resolved
+                </h5>
+                <p class="mb-1" style="font-size: 0.85rem;"><strong>{{ assignment.get_outcome_display }}</strong> · Completed {{ assignment.completed_at|date:"M j, Y H:i" }}</p>
+                {% if assignment.reviewed_by %}
+                    <small class="text-muted d-block mb-2" style="font-size: 0.75rem;">
+                        <i class="fa-solid fa-user-check me-1"></i> Verified by Authority Officer: {{ assignment.reviewed_by.username }}
+                    </small>
+                {% endif %}
+                {% if assignment.notes %}<p class="text-muted mb-2" style="font-size: 0.8125rem;">{{ assignment.notes }}</p>{% endif %}
+                {% if assignment.outcome_image %}<img src="{{ assignment.outcome_image.url }}" class="img-fluid rounded border mt-2" alt="Outcome">{% endif %}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    const lat = {{ report.latitude }};
+    const lng = {{ report.longitude }};
+    const map = L.map('assignmentMap').setView([lat, lng], 14);
+    setTimeout(function(){ map.invalidateSize(); }, 150);
+    L.tileLayer(
+        'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}',
+        {
+            minZoom: 3,
+            maxNativeZoom: 17,
+            maxZoom: 19,
+            attribution: 'Tiles &copy; Esri &mdash; Source: Esri, DeLorme, NAVTEQ, USGS, Intermap, iPC, NRCAN, METI, TomTom'
+        }
+    ).addTo(map);
+
+    // Selected marker with subtle accent ring
+    L.circleMarker([lat, lng], {
+        color: '#dc2626',
+        fillColor: '#dc2626',
+        fillOpacity: 0.2,
+        radius: 16,
+        weight: 2,
+        dashArray: '3, 4'
+    }).addTo(map);
+
+    L.circleMarker([lat, lng], {
+        color: '#0f172a',
+        fillColor: '#dc2626',
+        fillOpacity: 0.9,
+        radius: 8,
+        weight: 2
+    }).addTo(map).bindPopup('<strong>Snake Sighting #{{ assignment.ranger_incident_number }}</strong><br>{{ report.location_name|escapejs }}').openPopup();
+
+    // Attach button loading indicators to action forms
+    document.querySelectorAll('form.action-feedback-form').forEach(form => {
+        form.addEventListener('submit', function() {
+            const btn = form.querySelector('button[type="submit"]');
+            if (btn && window.setButtonLoading) {
+                window.setButtonLoading(btn, true, 'Updating...');
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

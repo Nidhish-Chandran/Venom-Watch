@@ -1,51 +1,63 @@
-{% extends 'base.html' %}
+{% extends 'base_auth.html' %}
 
-{% block title %}Login - Venom Watch{% endblock %}
+{% block title %}Sign In — Venom Watch{% endblock %}
 
 {% block content %}
-<div class="container py-5">
-    <div class="row justify-content-center">
-        <div class="col-md-6 col-lg-5">
-            <div class="glass-card p-4 p-md-5">
-                <div class="text-center mb-4">
-                    <div class="badge bg-success bg-opacity-20 text-success p-3 rounded-circle mb-3 fs-3">
-                        <i class="fa-solid fa-user-lock"></i>
-                    </div>
-                    <h3 class="fw-bold text-white mb-1">Welcome Back</h3>
-                    <p class="text-muted small">Access Venom Watch Surveillance & Alert Portal</p>
-                </div>
+<div class="auth-container">
+    <div class="auth-card">
 
-                <form method="post" action="{% url 'accounts:login' %}">
-                    {% csrf_token %}
-                    
-                    {% if form.errors %}
-                        <div class="alert alert-danger py-2 small">
-                            Invalid username or password. Please try again.
-                        </div>
-                    {% endif %}
-
-                    <div class="mb-3">
-                        <label class="form-label text-light fw-medium"><i class="fa-solid fa-user me-1"></i> Username</label>
-                        <input type="text" name="username" class="form-control" placeholder="Enter your username" required autofocus>
-                    </div>
-
-                    <div class="mb-4">
-                        <label class="form-label text-light fw-medium"><i class="fa-solid fa-lock me-1"></i> Password</label>
-                        <input type="password" name="password" class="form-control" placeholder="Enter your password" required>
-                    </div>
-
-                    <button type="submit" class="btn btn-neon w-100 py-2 fs-6 mb-3">
-                        <i class="fa-solid fa-right-to-bracket me-2"></i> Log In
-                    </button>
-                </form>
-
-                <div class="text-center mt-3 pt-3 border-top border-secondary border-opacity-25">
-                    <p class="text-muted mb-0 small">Don't have an account?</p>
-                    <a href="{% url 'accounts:register' %}" class="text-success fw-bold text-decoration-none">
-                        Register a new account <i class="fa-solid fa-arrow-right ms-1"></i>
-                    </a>
-                </div>
+        <!-- Header -->
+        <div class="auth-card-header">
+            <div class="auth-icon-wrapper">
+                <i class="fa-solid fa-staff-snake"></i>
             </div>
+            <h2 class="auth-title">Welcome back</h2>
+            <p class="auth-subtitle">Sign in to your Venom Watch account</p>
+        </div>
+
+        <form method="post" action="{% url 'accounts:login' %}" novalidate autocomplete="on">
+            {% csrf_token %}
+
+            {% if form.non_field_errors %}
+                <div class="alert alert-danger py-2 mb-3" style="font-size: 0.8125rem;">
+                    {% for error in form.non_field_errors %}
+                        <div><i class="fa-solid fa-triangle-exclamation me-1"></i>{{ error }}</div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+
+            <div class="auth-form-group">
+                <label class="auth-form-label" for="{{ form.username.id_for_label }}">Username</label>
+                {{ form.username }}
+                {% for error in form.username.errors %}
+                    <div class="auth-form-error">
+                        <i class="fa-solid fa-circle-exclamation"></i>{{ error }}
+                    </div>
+                {% endfor %}
+            </div>
+
+            <div class="auth-form-group">
+                <label class="auth-form-label" for="{{ form.password.id_for_label }}">Password</label>
+                {{ form.password }}
+                {% for error in form.password.errors %}
+                    <div class="auth-form-error">
+                        <i class="fa-solid fa-circle-exclamation"></i>{{ error }}
+                    </div>
+                {% endfor %}
+            </div>
+
+            <button type="submit" class="auth-btn-primary">
+                <i class="fa-solid fa-right-to-bracket me-2"></i> Sign In
+            </button>
+        </form>
+
+        <div class="auth-divider"></div>
+
+        <p class="auth-footer-text">Don't have an account?</p>
+        <div class="text-center">
+            <a href="{% url 'accounts:register' %}" class="auth-link">
+                Create an account <i class="fa-solid fa-arrow-right ms-1"></i>
+            </a>
         </div>
     </div>
 </div>
