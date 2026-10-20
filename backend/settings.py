@@ -6,7 +6,17 @@ Snake Detection Module
 """
 
 from pathlib import Path
-from decouple import config
+try:
+    from decouple import config
+except ImportError:
+    import os
+    def config(key, default=None, cast=None):
+        val = os.environ.get(key, default)
+        if cast is bool and isinstance(val, str):
+            return val.lower() in ('true', '1', 'yes')
+        if cast and val is not None:
+            return cast(val)
+        return val
 
 # ============================================
 # BASE DIRECTORY
@@ -38,6 +48,7 @@ INSTALLED_APPS = [
 
     # Local apps
     'snake_detector',
+    'ai',
 ]
 
 # ============================================
