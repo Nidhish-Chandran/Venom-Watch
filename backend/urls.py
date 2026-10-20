@@ -9,7 +9,9 @@ from django.conf.urls.static import static
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('', include('snake_detector.urls')),
-    path('ai/', include('ai.urls')),  # App routes
+    path('ai/', include('ai.urls')),
+    path('dashboard/', include('dashboard.urls')),
+    path('hotspots/', include('hotspots.urls')),  # App routes
 ]
 
 # Serve media files during development

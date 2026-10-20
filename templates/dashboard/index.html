@@ -1,0 +1,465 @@
+{% extends 'base.html' %}
+
+{% block title %}Authority Dashboard & GIS — Venom Watch{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+
+    <!-- Page Header -->
+    <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3 mb-4">
+        <div>
+            <h2 class="fw-bold mb-1" style="font-size: 1.3rem; color: var(--text);">
+                <i class="fa-solid fa-chart-line me-2" style="color: var(--primary);"></i>
+                Wildlife Authority Surveillance & GIS
+            </h2>
+            <p class="text-muted mb-0" style="font-size: 0.8125rem;">
+                Incident monitoring · DBSCAN spatial clustering · Emergency dispatch
+            </p>
+        </div>
+        <div class="d-flex gap-2 flex-wrap">
+            <a href="{% url 'hotspots:view' %}" class="btn btn-outline-teal btn-sm">
+                <i class="fa-solid fa-fire me-1"></i> Hotspot Radar
+            </a>
+            <a href="{% url 'reports:create' %}" class="btn btn-teal btn-sm">
+                <i class="fa-solid fa-plus me-1"></i> Add Sighting
+            </a>
+        </div>
+    </div>
+
+    <!-- Emergency Action Bar -->
+    <div class="emergency-banner p-3 mb-4 d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3">
+        <div class="d-flex align-items-center gap-3">
+            <i class="fa-solid fa-phone-volume" style="color: var(--danger); font-size: 1.25rem;"></i>
+            <div>
+                <p class="fw-semibold mb-0" style="font-size: 0.9rem; color: var(--text);">
+                    Snakebite Emergency & Anti-Venom Support
+                </p>
+                <p class="text-muted mb-0" style="font-size: 0.8rem;">
+                    Nearest facilities sorted by Haversine distance
+                </p>
+            </div>
+        </div>
+        <a href="{% url 'emergency:assistance' %}" class="btn btn-danger-venom btn-sm text-nowrap">
+            <i class="fa-solid fa-kit-medical me-1"></i> Emergency Hospital Locator
+        </a>
+    </div>
+
+    <!-- Metrics Row -->
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-lg-2">
+            <div class="stat-box d-flex align-items-center gap-3">
+                <div class="stat-icon bg-light border">
+                    <i class="fa-solid fa-eye" style="color: var(--primary);"></i>
+                </div>
+                <div>
+                    <div class="fw-bold counter-value" style="font-size: 1.35rem; line-height: 1.1; color: var(--text);">{{ total_sightings }}</div>
+                    <div class="text-muted" style="font-size: 0.75rem;">Total Sightings</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-lg-2">
+            <div class="stat-box d-flex align-items-center gap-3">
+                <div class="stat-icon bg-danger-light">
+                    <i class="fa-solid fa-fire" style="color: var(--danger);"></i>
+                </div>
+                <div>
+                    <div class="fw-bold counter-value" style="font-size: 1.35rem; line-height: 1.1; color: var(--text);">{{ hotspot_data.high_alert_count }}</div>
+                    <div class="text-muted" style="font-size: 0.75rem;">DBSCAN Clusters</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-lg-2">
+            <div class="stat-box d-flex align-items-center gap-3">
+                <div class="stat-icon bg-warning-light">
+                    <i class="fa-solid fa-skull-crossbones" style="color: var(--warning);"></i>
+                </div>
+                <div>
+                    <div class="fw-bold counter-value" style="font-size: 1.35rem; line-height: 1.1; color: var(--text);">{{ venomous_count }}</div>
+                    <div class="text-muted" style="font-size: 0.75rem;">Venomous</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-lg-2">
+            <div class="stat-box d-flex align-items-center gap-3">
+                <div class="stat-icon bg-warning-light">
+                    <i class="fa-solid fa-clock-rotate-left" style="color: var(--warning);"></i>
+                </div>
+                <div>
+                    <div class="fw-bold counter-value" style="font-size: 1.35rem; line-height: 1.1; color: var(--text);">{{ pending_count }}</div>
+                    <div class="text-muted" style="font-size: 0.75rem;">Pending Review</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-lg-2">
+            <div class="stat-box d-flex align-items-center gap-3">
+                <div class="stat-icon bg-light border">
+                    <i class="fa-solid fa-copy" style="color: var(--text-muted);"></i>
+                </div>
+                <div>
+                    <div class="fw-bold counter-value" style="font-size: 1.35rem; line-height: 1.1; color: var(--text);">{{ duplicate_count }}</div>
+                    <div class="text-muted" style="font-size: 0.75rem;">Duplicates</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-lg-2">
+            <div class="stat-box d-flex align-items-center gap-3">
+                <div class="stat-icon bg-light border">
+                    <i class="fa-solid fa-truck-medical" style="color: var(--info);"></i>
+                </div>
+                <div>
+                    <div class="fw-bold counter-value" style="font-size: 1.35rem; line-height: 1.1; color: var(--text);">{{ unassigned_count }}</div>
+                    <div class="text-muted" style="font-size: 0.75rem;">Unassigned</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Map & Recent Feed -->
+    <div class="row g-4">
+        <!-- GIS Surveillance Map -->
+        <div class="col-lg-8">
+            <div class="card-clean p-3">
+                <div class="d-flex align-items-center justify-content-between mb-3">
+                    <h5 class="fw-semibold mb-0" style="font-size: 0.9375rem; color: var(--text);">
+                        <i class="fa-solid fa-map-location-dot me-2" style="color: var(--primary);"></i>
+                        Real-Time GIS Incident Map
+                    </h5>
+                    <span class="badge bg-light text-dark border" style="font-size: 0.7rem;">
+                        <i class="fa-solid fa-lock me-1" style="color: var(--primary);"></i> Authority View
+                    </span>
+                </div>
+                <div id="mainDashboardMap" class="map-container" style="height: 460px;"></div>
+                <div class="d-flex flex-wrap gap-3 mt-2" style="font-size: 0.72rem; color: var(--muted, #64748b);">
+                    <span><i class="fa-solid fa-circle me-1" style="color:#dc2626;"></i>Venomous · Unassigned</span>
+                    <span><i class="fa-solid fa-circle me-1" style="color:#f59e0b;"></i>Response Active</span>
+                    <span><i class="fa-solid fa-circle me-1" style="color:#16a34a;"></i>Non-Venomous / Completed</span>
+                    <span class="ms-auto"><i class="fa-solid fa-hand-pointer me-1"></i>Click a marker to open the report &amp; assign a ranger</span>
+                </div>
+
+                <!-- Report detail panel (opens when a marker is clicked) -->
+                <div id="reportPanel" class="mt-3 border rounded-3 p-3 d-none" style="background: var(--surface, #fff);">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <h6 class="fw-bold mb-0" id="panelTitle">Snake Sighting</h6>
+                        <button type="button" class="btn-close" onclick="document.getElementById('reportPanel').classList.add('d-none')"></button>
+                    </div>
+                    <div id="panelBody" class="mt-2" style="font-size: 0.83rem;"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Activity Feed -->
+        <div class="col-lg-4">
+            <div class="card-clean p-3 h-100 d-flex flex-column">
+                <div class="d-flex align-items-center justify-content-between mb-3 pb-2 border-bottom">
+                    <h5 class="fw-semibold mb-0" style="font-size: 0.9375rem; color: var(--text);">
+                        <i class="fa-solid fa-list-check me-2" style="color: var(--primary);"></i>
+                        Recent Sightings
+                    </h5>
+                    <a href="{% url 'reports:list' %}" class="text-decoration-none fw-semibold"
+                       style="font-size: 0.8rem; color: var(--primary);">View all &raquo;</a>
+                </div>
+
+                <div class="overflow-auto flex-grow-1" style="max-height: 420px;">
+                    {% for report in recent_sightings %}
+                        <a href="{% url 'reports:detail' pk=report.pk %}" class="text-decoration-none d-block">
+                            <div class="d-flex justify-content-between align-items-start py-2 border-bottom"
+                                 style="transition: background-color 150ms;">
+                                <div style="min-width: 0;">
+                                    <p class="fw-semibold mb-0 text-truncate"
+                                       style="font-size: 0.875rem; color: var(--text);">{{ report.title }}</p>
+                                    <small class="d-block" style="color: var(--primary);">
+                                        {{ report.species_predicted|default:"Snake" }}
+                                    </small>
+                                    <small class="text-muted d-block">
+                                        <i class="fa-solid fa-location-dot me-1" style="color: var(--danger);"></i>
+                                        {{ report.location_name }}
+                                    </small>
+                                    <small class="text-muted">{{ report.created_at|timesince }} ago</small>
+                                </div>
+                                <div class="flex-shrink-0 ms-2">
+                                    {% if report.venom_category == 'HIGHLY_VENOMOUS' %}
+                                        <span class="badge-venomous">Highly Venomous</span>
+                                    {% elif report.venom_category == 'VENOMOUS' %}
+                                        <span class="badge-mild">Venomous</span>
+                                    {% else %}
+                                        <span class="badge-non-venomous">Non-Venomous</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </a>
+                    {% empty %}
+                        <div class="text-center text-muted py-5">
+                            <i class="fa-solid fa-camera-slash fa-2x mb-2 d-block text-secondary"></i>
+                            <small>No sightings logged yet.</small>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // ===== Authority Geolocation Map: report markers + ranger assignment =====
+    document.addEventListener("DOMContentLoaded", function () {
+        const map = L.map('mainDashboardMap').setView([9.9312, 76.2673], 11);
+        map.invalidateSize();
+        window.addEventListener('resize', () => map.invalidateSize());
+        L.tileLayer(
+            'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}',
+            {
+                minZoom: 3,
+                maxNativeZoom: 17,
+                maxZoom: 19,
+                attribution: 'Tiles &copy; Esri &mdash; Source: Esri, DeLorme, NAVTEQ, USGS, Intermap, iPC, NRCAN, METI, TomTom'
+            }
+        ).addTo(map);
+
+        const reportsApiUrl = "{% url 'reports:map_reports_api' %}";
+        const panelApiUrlBase = "/reports/api/report-panel/";
+        const spiderLegLayer = L.layerGroup().addTo(map);
+        const markerLayer = L.layerGroup().addTo(map);
+        const clusterLayer = L.layerGroup().addTo(map);
+        const markersById = new Map();
+        let selectedReportId = null;
+        let initialBoundsFitted = false;
+        let latestReportsData = [];
+
+        const COLORS = { red: '#dc2626', amber: '#f59e0b', green: '#16a34a' };
+
+        function markerColor(r) {
+            if (r.dispatch_state === 'ACTIVE') return COLORS.amber;
+            if (r.dispatch_state === 'COMPLETED') return COLORS.green;
+            return r.is_venomous ? COLORS.red : COLORS.green;
+        }
+
+        function esc(s) {
+            return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({
+                '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+            }[c]));
+        }
+
+        function recalculateOffsets() {
+            spiderLegLayer.clearLayers();
+            const groups = new Map();
+            latestReportsData.forEach(r => {
+                const key = `${r.latitude.toFixed(5)},${r.longitude.toFixed(5)}`;
+                if (!groups.has(key)) groups.set(key, []);
+                groups.get(key).push(r);
+            });
+
+            const bounds = [];
+            groups.forEach(groupReports => {
+                const groupSize = groupReports.length;
+                groupReports.forEach((r, idx) => {
+                    const entry = markersById.get(r.id);
+                    if (!entry) return;
+
+                    const baseLatLng = [r.latitude, r.longitude];
+                    let displayLatLng = baseLatLng;
+
+                    if (groupSize > 1) {
+                        const centerPt = map.latLngToLayerPoint(baseLatLng);
+                        const angle = (2 * Math.PI * idx) / groupSize - (Math.PI / 2);
+                        const pixelRadius = groupSize <= 4 ? 22 : 28;
+                        const offsetPt = L.point(
+                            centerPt.x + pixelRadius * Math.cos(angle),
+                            centerPt.y + pixelRadius * Math.sin(angle)
+                        );
+                        displayLatLng = [map.layerPointToLatLng(offsetPt).lat, map.layerPointToLatLng(offsetPt).lng];
+
+                        L.polyline([baseLatLng, displayLatLng], {
+                            color: markerColor(r),
+                            weight: 1.5,
+                            opacity: 0.45,
+                            dashArray: '2, 3'
+                        }).addTo(spiderLegLayer);
+                    }
+
+                    entry.marker.setLatLng(displayLatLng);
+                    bounds.push(displayLatLng);
+                });
+            });
+
+            if (bounds.length > 0 && !initialBoundsFitted) {
+                const first = bounds[0];
+                const allSame = bounds.every(c => Math.abs(c[0] - first[0]) < 0.0001 && Math.abs(c[1] - first[1]) < 0.0001);
+                if (allSame) {
+                    map.setView(first, 13);
+                } else {
+                    map.fitBounds(bounds, { padding: [50, 50], maxZoom: 14 });
+                }
+                initialBoundsFitted = true;
+            }
+        }
+
+        map.on('zoomend', recalculateOffsets);
+
+        function refreshMarkers() {
+            const url = reportsApiUrl + (reportsApiUrl.includes('?') ? '&' : '?') + '_t=' + Date.now();
+            fetch(url, { credentials: 'same-origin', cache: 'no-store' })
+                .then(res => res.json())
+                .then(data => {
+                    const validReports = [];
+                    (data.reports || []).forEach(r => {
+                        const lat = typeof r.latitude === 'number' ? r.latitude : parseFloat(r.latitude);
+                        const lng = typeof r.longitude === 'number' ? r.longitude : parseFloat(r.longitude);
+                        if (!isNaN(lat) && !isNaN(lng) && !(lat === 0 && lng === 0) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
+                            r.latitude = lat;
+                            r.longitude = lng;
+                            validReports.push(r);
+                        }
+                    });
+
+                    latestReportsData = validReports;
+                    const returnedIds = new Set(validReports.map(r => r.id));
+
+                    // Remove markers no longer in dataset
+                    for (const [id, entry] of markersById.entries()) {
+                        if (!returnedIds.has(id)) {
+                            markerLayer.removeLayer(entry.marker);
+                            markersById.delete(id);
+                        }
+                    }
+
+                    // Add or update markers
+                    validReports.forEach(r => {
+                        const color = markerColor(r);
+                        const popupHtml = `<div style="min-width:160px">` +
+                            `<strong style="color:${color}">Snake Sighting #${r.id}</strong><br>` +
+                            `<span>${esc(r.is_venomous ? 'VENOMOUS' : 'NON-VENOMOUS')} · ${esc(r.location_name)}</span><br>` +
+                            `<small>Assignment: <b>${esc(r.assignment.status_display)}</b>` +
+                            (r.assignment.ranger ? ` (${esc(r.assignment.ranger)})` : '') + `</small></div>`;
+
+                        if (markersById.has(r.id)) {
+                            const entry = markersById.get(r.id);
+                            entry.data = r;
+                            entry.marker.setStyle({
+                                color: color,
+                                fillColor: color,
+                                radius: r.id === selectedReportId ? 11 : 7,
+                                weight: r.id === selectedReportId ? 3 : 2
+                            });
+                            entry.marker.setPopupContent(popupHtml);
+                        } else {
+                            const m = L.circleMarker([r.latitude, r.longitude], {
+                                color: color, fillColor: color,
+                                fillOpacity: 0.85, radius: r.id === selectedReportId ? 11 : 7,
+                                weight: r.id === selectedReportId ? 3 : 2
+                            });
+                            m.bindPopup(popupHtml);
+                            m.on('click', () => openPanel(r.id));
+                            m.addTo(markerLayer);
+                            markersById.set(r.id, { marker: m, data: r });
+                        }
+                    });
+
+                    recalculateOffsets();
+
+                    // Refresh DBSCAN clusters cleanly into clusterLayer
+                    fetch("{% url 'hotspots:api_clusters' %}", { credentials: 'same-origin', cache: 'no-store' })
+                        .then(res => res.json())
+                        .then(hs => {
+                            clusterLayer.clearLayers();
+                            (hs.clusters || []).forEach(cluster => {
+                                L.circle([cluster.center_lat, cluster.center_lng], {
+                                    color: '#7c3aed', fillColor: '#7c3aed', fillOpacity: 0.10,
+                                    radius: cluster.radius_meters, weight: 1.5, dashArray: '5,5'
+                                }).addTo(clusterLayer).bindPopup(
+                                    `<strong style="color:#7c3aed;">DBSCAN DENSITY CLUSTER</strong><br>` +
+                                    `<b>Location:</b> ${esc(cluster.location_name)}<br>` +
+                                    `<b>Active Sightings:</b> ${cluster.sighting_count}`
+                                );
+                            });
+                        }).catch(() => {});
+                })
+                .catch(err => console.error("Error loading report markers:", err));
+        }
+
+        function badge(status) {
+            const colors = {
+                UNASSIGNED: ['#fee2e2', '#b91c1c'], ASSIGNED: ['#fef3c7', '#92400e'],
+                ACCEPTED: ['#dbeafe', '#1d4ed8'], ON_THE_WAY: ['#dbeafe', '#1d4ed8'],
+                AT_LOCATION: ['#ede9fe', '#6d28d9'], COMPLETED: ['#dcfce7', '#15803d']
+            };
+            const c = colors[status] || ['#f1f5f9', '#475569'];
+            return `<span style="background:${c[0]};color:${c[1]};padding:2px 8px;border-radius:999px;font-weight:600;font-size:0.72rem;">${esc(status.replace(/_/g, ' '))}</span>`;
+        }
+
+        function renderPanel(p) {
+            selectedReportId = p.id;
+            // Highlight selected marker
+            for (const [id, entry] of markersById.entries()) {
+                entry.marker.setStyle({
+                    radius: id === selectedReportId ? 11 : 7,
+                    weight: id === selectedReportId ? 3 : 2
+                });
+            }
+
+            document.getElementById('panelTitle').innerHTML =
+                `<i class="fa-solid fa-location-dot me-1" style="color:var(--primary);"></i> Snake Sighting #${p.id}`;
+            let html = '';
+            html += `<div class="d-flex gap-3 mb-2">`;
+            if (p.image_url) {
+                html += `<img src="${esc(p.image_url)}" alt="snake" style="width:84px;height:84px;object-fit:cover;border-radius:10px;border:1px solid #e2e8f0;" onerror="this.onerror=null;this.parentElement.innerHTML='<div style=\'width:84px;height:84px;background:#f1f5f9;border-radius:10px;display:flex;align-items:center;justify-content:center;color:#94a3b8;font-size:0.7rem;text-align:center;padding:4px;\'>Image unavailable</div>';">`;
+            } else {
+                html += `<div style="width:84px;height:84px;background:#f1f5f9;border-radius:10px;display:flex;align-items:center;justify-content:center;color:#94a3b8;font-size:0.7rem;text-align:center;padding:4px;border:1px solid #e2e8f0;">Image unavailable</div>`;
+            }
+            html += `<div>
+                <div><span style="font-weight:700;color:${p.is_venomous ? '#dc2626' : '#16a34a'}">${esc(p.snake_status)}</span>
+                ${p.confidence ? `<span class="text-muted"> · ${p.confidence}% confidence</span>` : ''}</div>
+                ${p.species ? `<div class="text-muted">${esc(p.species)}</div>` : ''}
+                <div>Reported: ${esc(p.reported_at)}</div>
+                <div><i class="fa-solid fa-map-pin me-1" style="color:var(--danger);"></i>${esc(p.location_name)}
+                <span class="text-muted">(${p.latitude}, ${p.longitude})</span></div>
+                <div class="mt-1">Assignment: ${badge(p.status)}${p.ranger ? ` &nbsp;Ranger: <b>${esc(p.ranger_name || p.ranger)}</b>${p.distance_km != null ? ` · ${p.distance_km} km` : ''}${p.assigned_at ? `<br><small class='text-muted'>Assigned at ${esc(p.assigned_at)}</small>` : ''}` : ''}</div>
+                <a href="${esc(p.detail_url)}" class="fw-semibold text-decoration-none" style="color:var(--primary);">Open full report &raquo;</a>
+              </div></div>`;
+
+            if (p.assigned) {
+                html += `<div class="mt-2 pt-2 border-top d-flex justify-content-between align-items-center flex-wrap gap-2">
+                    <span><b>${esc(p.ranger_name || p.ranger)}</b> is handling this incident.</span>
+                    <form method="post" action="/reports/assignments/${p.assignment_id}/cancel/"
+                          onsubmit="return confirm('Cancel this assignment so it can be reassigned?');" class="d-inline">
+                        {% csrf_token %}
+                        <button class="btn btn-sm btn-outline-danger"><i class="fa-solid fa-rotate me-1"></i>Cancel &amp; Reassign</button>
+                    </form>
+                </div>`;
+            } else if (p.candidates && p.candidates.length) {
+                html += `<div class="mt-2 pt-2 border-top">
+                    <div class="fw-semibold mb-1" style="font-size:0.8rem;">
+                        <i class="fa-solid fa-user-plus me-1" style="color:var(--primary);"></i>Available Rangers Near This Location</div>`;
+                p.candidates.forEach(c => {
+                    html += `<form method="post" action="/reports/${p.id}/assign/" class="d-flex justify-content-between align-items-center py-1 border-bottom">
+                        {% csrf_token %}
+                        <input type="hidden" name="ranger_id" value="${c.id}">
+                        <span>${esc(c.name)} <span class="text-muted">· ${esc(c.location)}${c.distance_km != null ? ` · ${c.distance_km} km` : ''} · AVAILABLE</span></span>
+                        <button class="btn btn-teal btn-sm">Assign</button>
+                    </form>`;
+                });
+                html += `</div>`;
+            } else {
+                html += `<div class="mt-2 pt-2 border-top text-muted">No AVAILABLE rangers are registered in or near this location.</div>`;
+            }
+
+            document.getElementById('panelBody').innerHTML = html;
+            document.getElementById('reportPanel').classList.remove('d-none');
+        }
+
+        function openPanel(reportId) {
+            fetch(panelApiUrlBase + reportId + '/', { credentials: 'same-origin', cache: 'no-store' })
+                .then(res => res.json())
+                .then(renderPanel)
+                .catch(err => console.error("Error loading report panel:", err));
+        }
+
+        window.refreshAuthorityMap = refreshMarkers;
+        refreshMarkers();
+        // Reliable 10-second automatic polling
+        setInterval(refreshMarkers, 10000);
+    });
+</script>
+{% endblock %}

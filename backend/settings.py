@@ -49,6 +49,8 @@ INSTALLED_APPS = [
     # Local apps
     'snake_detector',
     'ai',
+    'dashboard',
+    'hotspots',
 ]
 
 # ============================================

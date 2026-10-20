@@ -1,0 +1,217 @@
+{% extends 'base.html' %}
+
+{% block title %}DBSCAN Hotspot Radar — Venom Watch{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+
+    <!-- Page Header -->
+    <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between mb-4 gap-3">
+        <div>
+            <h2 class="fw-bold mb-1" style="font-size: 1.3rem; color: var(--text);">
+                <i class="fa-solid fa-fire me-2" style="color: var(--danger);"></i>
+                DBSCAN Hotspot Radar
+            </h2>
+            <p class="text-muted mb-0" style="font-size: 0.8125rem;">
+                Spatial density clustering (scikit-learn DBSCAN) on active sightings · 24–48h window
+            </p>
+        </div>
+        <span class="badge" style="background: var(--danger-light); color: var(--danger); font-size: 0.78rem; padding: 0.4em 0.8em;">
+            <i class="fa-solid fa-clock me-1"></i> Auto-Expiring Active Window
+        </span>
+    </div>
+
+    <!-- Summary Metrics -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-4">
+            <div class="stat-box d-flex align-items-center gap-3">
+                <div class="stat-icon bg-danger-light">
+                    <i class="fa-solid fa-triangle-exclamation" style="color: var(--danger);"></i>
+                </div>
+                <div>
+                    <div class="fw-bold" style="font-size: 1.35rem; line-height: 1.1; color: var(--text);">
+                        {{ hotspot_data.high_alert_count }}
+                    </div>
+                    <div class="text-muted" style="font-size: 0.75rem;">Active High-Alert Hotspots</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="stat-box d-flex align-items-center gap-3">
+                <div class="stat-icon bg-warning-light">
+                    <i class="fa-solid fa-eye" style="color: var(--warning);"></i>
+                </div>
+                <div>
+                    <div class="fw-bold" style="font-size: 1.35rem; line-height: 1.1; color: var(--text);">
+                        {{ hotspot_data.total_active_sightings }}
+                    </div>
+                    <div class="text-muted" style="font-size: 0.75rem;">Active Window Sightings</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="stat-box d-flex align-items-center gap-3">
+                <div class="stat-icon bg-success-light">
+                    <i class="fa-solid fa-shield-heart" style="color: var(--success);"></i>
+                </div>
+                <div>
+                    <div class="fw-bold" style="font-size: 1.35rem; line-height: 1.1; color: var(--text);">
+                        {{ hotspot_data.green_spots|length }}
+                    </div>
+                    <div class="text-muted" style="font-size: 0.75rem;">Safe / Isolated Areas</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Map & Cluster Panel -->
+    <div class="row g-4">
+
+        <!-- Leaflet Map -->
+        <div class="col-lg-8">
+            <div class="card-clean p-3">
+                <div class="d-flex align-items-center justify-content-between mb-3">
+                    <h5 class="fw-semibold mb-0" style="font-size: 0.9375rem; color: var(--text);">
+                        <i class="fa-solid fa-map-location-dot me-2" style="color: var(--primary);"></i>
+                        Spatial Clustering Map
+                    </h5>
+                    <div style="font-size: 0.8rem;">
+                        <span class="me-3" style="color: var(--danger);">
+                            <i class="fa-solid fa-circle me-1"></i> High Alert
+                        </span>
+                        <span style="color: var(--success);">
+                            <i class="fa-solid fa-circle me-1"></i> Green Safe
+                        </span>
+                    </div>
+                </div>
+                <div id="hotspotMap" class="map-container" style="height: 500px;"></div>
+            </div>
+        </div>
+
+        <!-- Cluster Breakdown -->
+        <div class="col-lg-4">
+            <div class="card-clean p-3 h-100 d-flex flex-column">
+                <h5 class="fw-semibold mb-3" style="font-size: 0.9375rem; color: var(--text);">
+                    <i class="fa-solid fa-layer-group me-2" style="color: var(--danger);"></i>
+                    Active Cluster Breakdown
+                </h5>
+
+                <div class="overflow-auto flex-grow-1" style="max-height: 460px;">
+                    {% for cluster in hotspot_data.clusters %}
+                        <div class="border rounded p-3 mb-3"
+                             style="border-color: var(--danger-muted) !important; background: var(--danger-light);">
+                            <div class="d-flex align-items-center justify-content-between mb-1">
+                                <p class="fw-semibold mb-0" style="font-size: 0.875rem; color: var(--danger);">
+                                    <i class="fa-solid fa-fire me-1"></i> {{ cluster.location_name }}
+                                </p>
+                                <span class="badge" style="background: var(--danger); color: #fff; font-size: 0.7rem;">
+                                    {{ cluster.radius_meters }}m radius
+                                </span>
+                            </div>
+                            <p class="text-muted mb-2" style="font-size: 0.8rem;">
+                                <strong>{{ cluster.sighting_count }}</strong> sighting(s) &middot;
+                                <strong>{{ cluster.venomous_count }}</strong> venomous
+                            </p>
+                            <div class="border-top pt-2" style="border-color: var(--danger-muted) !important;">
+                                <p class="fw-semibold mb-1" style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.03em;">
+                                    Cluster Sightings
+                                </p>
+                                <ul class="list-unstyled mb-0">
+                                    {% for r in cluster.reports %}
+                                        <li class="mb-1" style="font-size: 0.8rem;">
+                                            <i class="fa-solid fa-circle-dot me-1
+                                               {% if r.is_venomous %}text-danger{% else %}text-success{% endif %}"></i>
+                                            <a href="{% url 'reports:detail' pk=r.report_id %}"
+                                               class="text-decoration-none fw-semibold"
+                                               style="color: var(--primary);">
+                                                {{ r.species }} ({{ r.created_at }})
+                                            </a>
+                                        </li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                        </div>
+                    {% empty %}
+                        <div class="text-center text-muted py-5">
+                            <i class="fa-solid fa-shield-check fa-2x mb-2 d-block" style="color: var(--success);"></i>
+                            <small>No active high-alert clusters in the current window.</small>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const map = L.map('hotspotMap').setView([9.9312, 76.2673], 12);
+        setTimeout(function(){ map.invalidateSize(); }, 150);
+
+        L.tileLayer(
+            'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}',
+            {
+                minZoom: 3,
+                maxNativeZoom: 17,
+                maxZoom: 19,
+                attribution: 'Tiles &copy; Esri &mdash; Source: Esri, DeLorme, NAVTEQ, USGS, Intermap, iPC, NRCAN, METI, TomTom'
+            }
+        ).addTo(map);
+
+        fetch("{% url 'hotspots:api_clusters' %}")
+            .then(res => res.json())
+            .then(data => {
+                const bounds = [];
+
+                data.clusters.forEach(cluster => {
+                    const latLng = [cluster.center_lat, cluster.center_lng];
+                    bounds.push(latLng);
+
+                    L.circle(latLng, {
+                        color: '#dc2626',
+                        fillColor: '#dc2626',
+                        fillOpacity: 0.25,
+                        radius: cluster.radius_meters,
+                        weight: 2
+                    }).addTo(map).bindPopup(`
+                        <div>
+                            <strong style="color: #dc2626;">HIGH ALERT HOTSPOT</strong><br>
+                            <b>Location:</b> ${cluster.location_name}<br>
+                            <b>Sightings:</b> ${cluster.sighting_count} (${cluster.venomous_count} Venomous)<br>
+                            <b>Zone Radius:</b> ${cluster.radius_meters} meters
+                        </div>
+                    `);
+
+                    L.marker(latLng).addTo(map).bindPopup(`<b>${cluster.location_name} Center</b>`);
+                });
+
+                data.green_spots.forEach(spot => {
+                    const latLng = [spot.latitude, spot.longitude];
+                    bounds.push(latLng);
+
+                    L.circleMarker(latLng, {
+                        color: '#16a34a',
+                        fillColor: '#16a34a',
+                        fillOpacity: 0.7,
+                        radius: 8
+                    }).addTo(map).bindPopup(`
+                        <div>
+                            <strong style="color: #16a34a;">GREEN SPOT (Safe Area)</strong><br>
+                            <b>Species:</b> ${spot.species}<br>
+                            <b>Location:</b> ${spot.location_name}<br>
+                            <small>Reported: ${spot.created_at}</small>
+                        </div>
+                    `);
+                });
+
+                if (bounds.length > 0) {
+                    map.fitBounds(bounds, { padding: [40, 40] });
+                }
+            })
+            .catch(err => console.error("Error loading hotspot API data:", err));
+    });
+</script>
+{% endblock %}
